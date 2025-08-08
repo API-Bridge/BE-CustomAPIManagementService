@@ -2,6 +2,9 @@ package org.example.customapisvc;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 
 /**
  * Custom API Service의 메인 애플리케이션 클래스
@@ -12,7 +15,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * - 애플리케이션 시작 시 필요한 빈들을 스캔하고 초기화
  * - 서블릿 컨테이너 내장 및 HTTP 서버 구동
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+    RedisAutoConfiguration.class,
+    RedisRepositoriesAutoConfiguration.class,
+    KafkaAutoConfiguration.class
+})
 public class CustomApiSvcApplication {
 
     /**

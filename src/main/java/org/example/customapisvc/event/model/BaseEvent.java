@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.springframework.context.annotation.Profile;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

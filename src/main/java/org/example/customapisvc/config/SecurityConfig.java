@@ -4,6 +4,7 @@ import org.example.customapisvc.security.AudienceValidator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,6 +30,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@Profile("!dev")  // dev 프로필이 아닐 때만 실행
 public class SecurityConfig {
 
     @Value("${auth0.audience}")
@@ -47,38 +49,39 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/health").permitAll()
                 .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .decoder(jwtDecoder())
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                )
             );
+//            .oauth2ResourceServer(oauth2 -> oauth2
+//                .jwt(jwt -> jwt
+//                    .decoder(jwtDecoder())
+//                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+//                )
+//            );
 
         return http.build();
     }
 
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder jwtDecoder = JwtDecoders.fromOidcIssuerLocation(issuer);
-
-        OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
-        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
-        OAuth2TokenValidator<Jwt> withAudience = new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator);
-
-        jwtDecoder.setJwtValidator(withAudience);
-
-        return jwtDecoder;
-    }
-
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
-        converter.setAuthoritiesClaimName("permissions");
-        converter.setAuthorityPrefix("");
-
-        JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
-        jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
-        return jwtConverter;
-    }
+    //JWT 토큰 검증을 위한 빈 설정
+//    @Bean
+//    public JwtDecoder jwtDecoder() {
+//        NimbusJwtDecoder jwtDecoder = JwtDecoders.fromOidcIssuerLocation(issuer);
+//
+//        OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
+//        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
+//        OAuth2TokenValidator<Jwt> withAudience = new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator);
+//
+//        jwtDecoder.setJwtValidator(withAudience);
+//
+//        return jwtDecoder;
+//    }
+//
+//    @Bean
+//    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+//        JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
+//        converter.setAuthoritiesClaimName("permissions");
+//        converter.setAuthorityPrefix("");
+//
+//        JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
+//        jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
+//        return jwtConverter;
+//    }
 }

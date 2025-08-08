@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 /**
  * 마이크로서비스 이벤트 발행 컴포넌트
@@ -19,7 +20,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class EventPublisher {
+@Profile("!dev")  // dev 프로필이 아닐 때만 활성화
+public class EventPublisher implements EventPublisherService {
 
     /** Kafka 메시지 전송을 위한 KafkaTemplate */
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -31,6 +33,7 @@ public class EventPublisher {
      * @param topic 이벤트를 발행할 Kafka 토픽
      * @param event 발행할 이벤트 객체 (BaseEvent 상속)
      */
+    @Override
     public void publishEvent(String topic, BaseEvent event) {
         log.info("Publishing event to topic: {}, eventType: {}, eventId: {}",
                 topic, event.getEventType(), event.getEventId());
