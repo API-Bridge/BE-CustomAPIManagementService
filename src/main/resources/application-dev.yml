@@ -1,0 +1,9 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 애플리케이션 시작시 스키마 생성, 종료시 삭제
+    defer-datasource-initialization: true  # schema.sql 실행 후 data.sql 실행
+  sql:
+    init:
+      mode: always  # data.sql 항상 실행
+      data-locations: classpath:data.sql  # 더미 데이터 파일 위치
