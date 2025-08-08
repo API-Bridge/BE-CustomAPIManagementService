@@ -51,9 +51,9 @@ spring:
 
   # 데이터베이스 설정
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/customapi?useSSL=false&serverTimezone=UTC}
+    url: jdbc:mysql://${DB_URL:127.0.0.1}:3306/${DB_NAME:custom_api_service_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:password}
+    password: ${DB_PASSWORD:cell4086}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -64,13 +64,13 @@ spring:
 
 # Auth0 설정
 auth0:
-  issuerUri: ${AUTH0_ISSUER_URI:https://dev-your-domain.auth0.com/}
-  audience: ${AUTH0_AUDIENCE:https://api.dev.yourservice.com}
+  issuerUri: ${AUTH0_ISSUER_URI:https://dev-dummy.auth0.com/}
+  audience: ${AUTH0_AUDIENCE:https://api.dev.dummy.com}
 
 # AWS 설정
-aws:
-  secretsmanager:
-    region: ${AWS_REGION:ap-northeast-2}
+#aws:
+#  secretsmanager:
+#    region: ${AWS_REGION:ap-northeast-2}
 
 # Circuit Breaker 설정 (Resilience4j)
 resilience4j:

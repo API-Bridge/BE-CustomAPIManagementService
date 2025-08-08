@@ -2,13 +2,25 @@ spring:
   application:
     name: custom-api-svc-test
   
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: 
+  
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+        
+  sql:
+    init:
+      mode: never  # Repository 테스트에서는 직접 데이터 생성(sql 문법 문제)
         
   h2:
     console:

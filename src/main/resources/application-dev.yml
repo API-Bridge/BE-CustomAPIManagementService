@@ -2,8 +2,14 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop  # 애플리케이션 시작시 스키마 생성, 종료시 삭제
-    defer-datasource-initialization: true  # schema.sql 실행 후 data.sql 실행
+    defer-datasource-initialization: true  # Hibernate 스키마 생성 후 data.sql 실행
+    properties:
+      hibernate:
+        hbm2ddl:
+          create_namespaces: true  # 데이터베이스 자동 생성 활성화
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl  # 테이블명 그대로 사용
   sql:
     init:
       mode: always  # data.sql 항상 실행
       data-locations: classpath:data.sql  # 더미 데이터 파일 위치
+      schema-locations: # schema.sql 비활성화 (Hibernate가 처리)
