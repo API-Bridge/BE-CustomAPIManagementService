@@ -67,6 +67,15 @@ auth0:
   issuerUri: ${AUTH0_ISSUER_URI:https://dev-dummy.auth0.com/}
   audience: ${AUTH0_AUDIENCE:https://api.dev.dummy.com}
 
+# Gemini AI 설정
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+
+# 외부 마이크로서비스 설정
+external-api-service:
+  base-url: ${EXTERNAL_API_SERVICE_URL:http://localhost:8081}
+
 # AWS 설정
 #aws:
 #  secretsmanager:

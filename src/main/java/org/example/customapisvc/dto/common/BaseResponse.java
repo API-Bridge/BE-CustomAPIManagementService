@@ -27,6 +27,9 @@ public class BaseResponse<T> {
     /** API 요청 성공 여부 */
     private boolean success;
     
+    /** 오류 코드 (옵션) */
+    private String errorCode;
+    
     /** 응답 메시지 */
     private String message;
     
@@ -81,6 +84,23 @@ public class BaseResponse<T> {
     public static <T> BaseResponse<T> error(String message) {
         return BaseResponse.<T>builder()
                 .success(false)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * 오류 코드와 메시지를 포함한 오류 응답을 생성
+     * 
+     * @param errorCode 오류 코드
+     * @param message 오류 메시지
+     * @param <T> 데이터 타입
+     * @return 오류 응답 객체
+     */
+    public static <T> BaseResponse<T> error(String errorCode, String message) {
+        return BaseResponse.<T>builder()
+                .success(false)
+                .errorCode(errorCode)
                 .message(message)
                 .timestamp(LocalDateTime.now())
                 .build();
