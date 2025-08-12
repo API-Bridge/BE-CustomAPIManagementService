@@ -34,7 +34,6 @@ public class CustomApiController {
         return BaseResponse.success(customApis, "커스텀 API 목록을 성공적으로 조회했습니다.");
     }
 
-    @Operation(summary = "커스텀 API 상세 조회", description = "커스텀 API ID로 특정 커스텀 API의 상세 정보를 조회합니다.")
     @GetMapping("/{customApiId}")
     public BaseResponse<CustomApiResponseDto> getCustomApiById(
             @Parameter(description = "커스텀 API ID", required = true, example = "api-001")
