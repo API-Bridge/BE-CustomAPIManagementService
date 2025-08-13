@@ -15,6 +15,7 @@ import org.example.customapisvc.dto.response.ExternalApiResponseDto;
 import org.example.customapisvc.repository.CustomApiRepository;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
 import org.example.customapisvc.service.ExternalApiService;
+import org.example.customapisvc.service.cache.DisabledApiCacheService;
 import org.example.customapisvc.util.GenerateTextFromTextInput;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +34,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
     private final GenerateTextFromTextInput geminiService;
     private final CustomApiRepository customApiRepository;
     private final ExternalApiService externalApiService;
+    private final DisabledApiCacheService disabledApiCacheService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -43,17 +47,33 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
             // 1단계: 외부API서비스에서 도메인/키워드에 해당하는 외부 API 리스트 조회
             ExternalApiRequestDto externalApiRequest = new ExternalApiRequestDto(request.getDomains(), request.getKeywords());
             ExternalApiResponseDto externalApiResponse = externalApiService.getExternalApiList(externalApiRequest);
-            
-            log.info("외부API서비스로부터 {} 개의 외부 API 수신", externalApiResponse.getExternalApiList().size());
+            List<ExternalApiInfoDto> availableExternalApis = externalApiResponse.getExternalApiList();
+            log.info("외부API서비스로부터 {} 개의 외부 API 수신", availableExternalApis.size());
 
-            // 2단계: Gemini AI에게 커스텀 API 생성 요청 (외부 API 리스트와 함께)
-            String aiPrompt = createPromptForCustomApiGeneration(request, externalApiResponse.getExternalApiList());
+            // 1.5단계: 캐시에서 비활성화된 외부 API 필터링
+            Set<String> disabledApiIds = disabledApiCacheService.getDisabledApis();
+            List<ExternalApiInfoDto> filteredApiList = availableExternalApis;
+            if (disabledApiIds != null && !disabledApiIds.isEmpty()) {
+                log.info("비활성화된 API {}개를 필터링합니다: {}", disabledApiIds.size(), disabledApiIds);
+                filteredApiList = availableExternalApis.stream()
+                        .filter(api -> !disabledApiIds.contains(api.getApiId()))
+                        .collect(Collectors.toList());
+                log.info("필터링 후 {}개의 외부 API가 남았습니다.", filteredApiList.size());
+            }
+
+            if (filteredApiList.isEmpty()) {
+                log.warn("사용 가능한 외부 API가 없어 AI 커스텀 API 생성을 중단합니다. customApiId: {}", request.getCustomApiId());
+                throw new RuntimeException("사용 가능한 외부 API가 없습니다.");
+            }
+
+            // 2단계: Gemini AI에게 커스텀 API 생성 요청 (필터링된 외부 API 리스트와 함께)
+            String aiPrompt = createPromptForCustomApiGeneration(request, filteredApiList);
             String aiResponse = geminiService.generateText(aiPrompt);
 
             log.debug("Gemini AI 응답: {}", aiResponse);
 
             // 3단계: AI 응답을 기반으로 커스텀 API 메타데이터 생성
-            CustomApiMetadata metadata = parseAiResponseToMetadata(aiResponse, externalApiResponse.getExternalApiList());
+            CustomApiMetadata metadata = parseAiResponseToMetadata(aiResponse, filteredApiList);
 
             // 4단계: 데이터베이스에 커스텀 API 저장
             CustomApi customApi = new CustomApi();

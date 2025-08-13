@@ -36,7 +36,7 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    /** Kafka 컴슈머 그룹 ID */
+    /** Kafka 컨슈머 그룹 ID */
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
 
@@ -66,6 +66,8 @@ public class KafkaConfig {
         return new KafkaTemplate<>(producerFactory());
     }
 
+
+
     /**
      * Kafka Consumer Factory 빈 설정
      * Kafka 토픽의 메시지를 수신하기 위한 Consumer 구성
@@ -82,6 +84,8 @@ public class KafkaConfig {
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         return new DefaultKafkaConsumerFactory<>(props);
     }
+
+
 
     /**
      * Kafka Listener Container Factory 빈 설정

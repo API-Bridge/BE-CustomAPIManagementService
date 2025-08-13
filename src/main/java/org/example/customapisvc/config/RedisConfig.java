@@ -9,8 +9,10 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -19,9 +21,9 @@ import java.time.Duration;
 /**
  * Redis 캐시 및 세션 저장소 설정 클래스
  * MSA 환경에서 성능 향상을 위한 Redis 기반 캐시 시스템 구성
- * 
+ *
  * 주요 기능:
- * - Redis 연결 팩토리 및 커넥션 풀 설정
+ * - Redis 연결 팩토리 및 커넥션 풀 설정 (AWS ElastiCache 연동 지원)
  * - RedisTemplate 구성 (JSON 직렬화/역직렬화)
  * - Spring Cache 추상화를 위한 캐시 매니저 설정
  * - TTL 및 캐시 정책 관리
@@ -37,11 +39,25 @@ public class RedisConfig {
     @Value("${spring.redis.port}")
     private int redisPort;
 
+    @Value("${spring.redis.password}")
+    private String redisPassword;
+
+    @Value("${spring.redis.ssl.enabled:false}")
+    private boolean redisSslEnabled;
+
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(
-                new RedisStandaloneConfiguration(redisHost, redisPort)
-        );
+        RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration(redisHost, redisPort);
+        redisStandaloneConfiguration.setPassword(redisPassword);
+
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder lettuceClientConfigurationBuilder =
+                LettuceClientConfiguration.builder();
+
+        if (redisSslEnabled) {
+            lettuceClientConfigurationBuilder.useSsl();
+        }
+
+        return new LettuceConnectionFactory(redisStandaloneConfiguration, lettuceClientConfigurationBuilder.build());
     }
 
     @Bean
@@ -52,6 +68,13 @@ public class RedisConfig {
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        return template;
+    }
+
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        StringRedisTemplate template = new StringRedisTemplate();
+        template.setConnectionFactory(connectionFactory);
         return template;
     }
 
