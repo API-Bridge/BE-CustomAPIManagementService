@@ -6,6 +6,7 @@ import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
 import org.example.customapisvc.repository.CustomApiRepository;
 import org.example.customapisvc.service.impl.AiCustomApiGenerationServiceImpl;
+import org.example.customapisvc.service.impl.CustomApiServiceImpl;
 import org.example.customapisvc.testdata.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +39,7 @@ class CustomApiServiceTest {
     private AiCustomApiGenerationService aiCustomApiGenerationService;
 
     @InjectMocks
-    private CustomApiService customApiService;
+    private CustomApiServiceImpl customApiService;
 
     @InjectMocks
     private AiCustomApiGenerationServiceImpl AIcustomApiServiceImpl;

@@ -5,7 +5,7 @@ import org.example.customapisvc.dto.ExternalApiInfoDto;
 import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
-import org.example.customapisvc.service.impl.CustomApiServiceImple;
+import org.example.customapisvc.service.CustomApiService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ class CustomApiControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private CustomApiServiceImple customApiService;
+    private CustomApiService customApiService;
     
     @MockitoBean
     private AiCustomApiGenerationService aiCustomApiGenerationService;

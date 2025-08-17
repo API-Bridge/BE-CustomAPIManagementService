@@ -4,10 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
+import org.example.customapisvc.util.StructuredLogger;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * AOP를 사용한 로깅 및 성능 모니터링 Aspect
@@ -23,6 +26,12 @@ import java.util.Arrays;
 @Aspect
 @Component
 public class LoggingAspect {
+
+    private final StructuredLogger structuredLogger;
+
+    public LoggingAspect(StructuredLogger structuredLogger) {
+        this.structuredLogger = structuredLogger;
+    }
 
     /** 컨트롤러 레이어의 모든 메소드를 대상으로 하는 포인트컷 */
     @Pointcut("execution(* org.example.customapisvc.controller..*(..))")
@@ -61,20 +70,45 @@ public class LoggingAspect {
         StopWatch stopWatch = new StopWatch();
         String className = joinPoint.getSignature().getDeclaringTypeName();
         String methodName = joinPoint.getSignature().getName();
+        String fullMethodName = className + "." + methodName;
+
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("layer", layer);
+        additionalFields.put("class_name", className);
+        additionalFields.put("method_name", methodName);
+        additionalFields.put("full_method_name", fullMethodName);
 
         try {
             stopWatch.start();
             Object result = joinPoint.proceed();
             stopWatch.stop();
 
+            long executionTime = stopWatch.getTotalTimeMillis();
+            additionalFields.put("execution_time_ms", executionTime);
+            additionalFields.put("status", "SUCCESS");
+
+            // 구조화된 성능 로깅
+            structuredLogger.logPerformanceEvent(fullMethodName, executionTime, "SUCCESS", additionalFields);
+
             log.info("[{}] {}.{} executed in {} ms",
-                layer, className, methodName, stopWatch.getTotalTimeMillis());
+                layer, className, methodName, executionTime);
 
             return result;
         } catch (Exception e) {
             stopWatch.stop();
+            long executionTime = stopWatch.getTotalTimeMillis();
+            
+            additionalFields.put("execution_time_ms", executionTime);
+            additionalFields.put("status", "FAILED");
+            additionalFields.put("exception_type", e.getClass().getSimpleName());
+            additionalFields.put("error_message", e.getMessage());
+
+            // 구조화된 에러 로깅
+            structuredLogger.logError("METHOD_EXECUTION_FAILED", 
+                "Method execution failed in " + layer + " layer", e, additionalFields);
+
             log.error("[{}] {}.{} failed after {} ms with exception: {}",
-                layer, className, methodName, stopWatch.getTotalTimeMillis(), e.getMessage());
+                layer, className, methodName, executionTime, e.getMessage());
             throw e;
         }
     }
@@ -103,7 +137,24 @@ public class LoggingAspect {
      */
     @AfterThrowing(pointcut = "controllerPointcut() || servicePointcut()", throwing = "ex")
     public void logAfterThrowing(JoinPoint joinPoint, Throwable ex) {
+        String methodSignature = joinPoint.getSignature().toShortString();
+        String className = joinPoint.getSignature().getDeclaringTypeName();
+        String methodName = joinPoint.getSignature().getName();
+        
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("method_signature", methodSignature);
+        additionalFields.put("class_name", className);
+        additionalFields.put("method_name", methodName);
+        additionalFields.put("exception_type", ex.getClass().getSimpleName());
+        
+        // 레이어 구분
+        String layer = className.contains(".controller.") ? "CONTROLLER" : "SERVICE";
+        additionalFields.put("layer", layer);
+        
+        structuredLogger.logError("UNHANDLED_EXCEPTION", 
+            "Unhandled exception in " + layer + " layer", ex, additionalFields);
+        
         log.error("Method: {} threw exception: {}",
-            joinPoint.getSignature().toShortString(), ex.getMessage());
+            methodSignature, ex.getMessage());
     }
 }

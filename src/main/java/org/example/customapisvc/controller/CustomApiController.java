@@ -9,7 +9,7 @@ import org.example.customapisvc.dto.common.BaseResponse;
 import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
-import org.example.customapisvc.service.impl.CustomApiServiceImple;
+import org.example.customapisvc.service.CustomApiService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomApiController {
 
-    private final CustomApiServiceImple customApiService;
+    private final CustomApiService customApiService;
     private final AiCustomApiGenerationService aiCustomApiGenerationService;
 
     @Operation(summary = "사용자의 커스텀 API 목록 조회", description = "특정 사용자가 생성한 모든 커스텀 API를 조회합니다.") //TODO: 사용자의 플랜 기반으로 갯수 제한 로직 추가

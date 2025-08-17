@@ -15,7 +15,7 @@ import org.example.customapisvc.dto.response.ExternalApiResponseDto;
 import org.example.customapisvc.repository.CustomApiRepository;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
 import org.example.customapisvc.service.ExternalApiService;
-import org.example.customapisvc.service.cache.DisabledApiCacheService;
+import org.example.customapisvc.service.cache.DisabledApiCache;
 import org.example.customapisvc.util.GenerateTextFromTextInput;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +34,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
     private final GenerateTextFromTextInput geminiService;
     private final CustomApiRepository customApiRepository;
     private final ExternalApiService externalApiService;
-    private final DisabledApiCacheService disabledApiCacheService;
+    private final DisabledApiCache disabledApiCache;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -51,7 +51,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
             log.info("외부API서비스로부터 {} 개의 외부 API 수신", availableExternalApis.size());
 
             // 1.5단계: 캐시에서 비활성화된 외부 API 필터링
-            Set<String> disabledApiIds = disabledApiCacheService.getDisabledApis();
+            Set<String> disabledApiIds = disabledApiCache.getDisabledApis();
             List<ExternalApiInfoDto> filteredApiList = availableExternalApis;
             if (disabledApiIds != null && !disabledApiIds.isEmpty()) {
                 log.info("비활성화된 API {}개를 필터링합니다: {}", disabledApiIds.size(), disabledApiIds);
