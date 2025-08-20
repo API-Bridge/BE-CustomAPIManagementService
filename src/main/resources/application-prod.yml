@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 애플리케이션 시작시 스키마 생성, 종료시 삭제
+    defer-datasource-initialization: true  # Hibernate 스키마 생성 후 data.sql 실행
+    properties:
+      hibernate:
+        hbm2ddl:
+          create_namespaces: true  # 데이터베이스 자동 생성 활성화
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl  # 테이블명 그대로 사용
+  sql:
+    init:
+      mode: never  # 더미 데이터 파일 실행 비활성화 (운영 환경 준비)

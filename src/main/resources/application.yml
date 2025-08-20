@@ -4,6 +4,7 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+
   # JPA 설정 (Amazon Corretto 17 최적화)
   jpa:
     properties:
@@ -38,16 +39,19 @@ spring:
         acks: all
         retries: 3
 
-  # Redis 설정  
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+  # Redis (AWS Elastic Cache) 설정
+  spring:
+    data:
+      redis:
+        host: ${AWS_ELASTIC_CACHE_ENDPOINT}
+        port: 6379
+        # 인증이 필요한 경우 주석을 해제하고 비밀번호를 설정
+        # password: your-redis-password
+        lettuce:
+          pool:
+            max-active: 8
+            max-idle: 8
+            min-idle: 0
 
   # 데이터베이스 설정
   datasource:
@@ -71,6 +75,9 @@ gemini:
 # 외부 마이크로서비스 설정
 external-api-service:
   base-url: ${EXTERNAL_API_SERVICE_URL:http://localhost:8081}
+
+user-service:
+  base-url: ${USER_SERVICE_URL:http://localhost:8082}
 
 # AWS 설정
 #aws:
@@ -151,7 +158,7 @@ management:
 
 # 서버 설정
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8083}
   servlet:
     context-path: /api/v1
   tomcat:

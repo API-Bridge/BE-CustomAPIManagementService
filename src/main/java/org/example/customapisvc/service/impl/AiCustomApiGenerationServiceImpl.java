@@ -15,8 +15,10 @@ import org.example.customapisvc.dto.response.ExternalApiResponseDto;
 import org.example.customapisvc.repository.CustomApiRepository;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
 import org.example.customapisvc.service.ExternalApiService;
+import org.example.customapisvc.service.UserService;
 import org.example.customapisvc.service.cache.DisabledApiCache;
 import org.example.customapisvc.util.GenerateTextFromTextInput;
+import org.example.customapisvc.dto.response.user.UserInfoResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,16 +36,21 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
     private final GenerateTextFromTextInput geminiService;
     private final CustomApiRepository customApiRepository;
     private final ExternalApiService externalApiService;
+    private final UserService userService;
     private final DisabledApiCache disabledApiCache;
     private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
     public CustomApiResponseDto generateCustomApiWithAi(InitiateCreationRequestDto request) {
-        log.info("AI 커스텀 API 생성 시작 - userId: {}, customApiId: {}, domains: {}, keywords: {}, userQuery: {}, plan: {}",
-                request.getUserId(), request.getCustomApiId(), request.getDomains(), request.getKeywords(), request.getUserQuery(), request.getPlan());
+        log.info("AI 커스텀 API 생성 시작 - userId: {}, customApiId: {}, domains: {}, keywords: {}, userQuery: {}",
+                request.getUserId(), request.getCustomApiId(), request.getDomains(), request.getKeywords(), request.getUserQuery());
 
         try {
+            // 0단계: User 서비스에서 사용자 정보 조회하여 플랜 확인
+            UserInfoResponseDto userInfo = userService.getUserInfo(request.getUserId());
+            String userPlan = userInfo.getPlan();
+            log.info("사용자 플랜 조회 완료 - userId: {}, plan: {}", request.getUserId(), userPlan);
             // 1단계: 외부API서비스에서 도메인/키워드에 해당하는 외부 API 리스트 조회
             ExternalApiRequestDto externalApiRequest = new ExternalApiRequestDto(request.getDomains(), request.getKeywords());
             ExternalApiResponseDto externalApiResponse = externalApiService.getExternalApiList(externalApiRequest);
@@ -66,8 +73,8 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
                 throw new RuntimeException("사용 가능한 외부 API가 없습니다.");
             }
 
-            // 2단계: Gemini AI에게 커스텀 API 생성 요청 (필터링된 외부 API 리스트와 함께)
-            String aiPrompt = createPromptForCustomApiGeneration(request, filteredApiList);
+            // 2단계: Gemini AI에게 커스텀 API 생성 요청 (필터링된 외부 API 리스트와 사용자 플랜 정보와 함께)
+            String aiPrompt = createPromptForCustomApiGeneration(request, filteredApiList, userPlan);
             String aiResponse = geminiService.generateText(aiPrompt);
 
             log.debug("Gemini AI 응답: {}", aiResponse);
@@ -110,12 +117,12 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
     /**
      * Gemini AI에게 보낼 프롬프트 생성
      */
-    private String createPromptForCustomApiGeneration(InitiateCreationRequestDto request, List<ExternalApiInfoDto> externalApiList) throws JsonProcessingException {
+    private String createPromptForCustomApiGeneration(InitiateCreationRequestDto request, List<ExternalApiInfoDto> externalApiList, String userPlan) throws JsonProcessingException {
         // 외부 API 리스트를 JSON 문자열로 변환
         String externalApiListJson = objectMapper.writeValueAsString(externalApiList);
 
         // 플랜에 따른 최대 API 개수 결정
-        int maxApiCount = "PRO".equalsIgnoreCase(request.getPlan()) ? 5 : 3;
+        int maxApiCount = "PRO".equalsIgnoreCase(userPlan) ? 5 : 3;
 
         return String.format("""
                 당신은 외부 API를 분석하고 사용자의 요구사항에 맞는 최적의 API를 선별하는 전문가입니다.
@@ -176,7 +183,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
                 - 모든 텍스트는 한국어로 작성하세요
                 """,
                 request.getUserQuery(),
-                request.getPlan(),
+                userPlan,
                 maxApiCount,
                 externalApiListJson,
                 maxApiCount,

@@ -15,6 +15,9 @@ public class WebClientConfig {
     @Value("${external-api-service.base-url}")
     private String externalApiServiceBaseUrl;
 
+    @Value("${user-service.base-url}")
+    private String userServiceBaseUrl;
+
     /**
      * 외부API서비스와 통신하기 위한 WebClient Bean
      */
@@ -22,6 +25,16 @@ public class WebClientConfig {
     public WebClient externalApiWebClient() {
         return WebClient.builder()
                 .baseUrl(externalApiServiceBaseUrl)
+                .build();
+    }
+
+    /**
+     * User 서비스와 통신하기 위한 WebClient Bean
+     */
+    @Bean
+    public WebClient userServiceWebClient() {
+        return WebClient.builder()
+                .baseUrl(userServiceBaseUrl)
                 .build();
     }
 }
