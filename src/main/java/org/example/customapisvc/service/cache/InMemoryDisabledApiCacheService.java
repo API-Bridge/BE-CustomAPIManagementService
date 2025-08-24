@@ -19,6 +19,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @ConditionalOnMissingBean(StringRedisTemplate.class)
 public class InMemoryDisabledApiCacheService implements DisabledApiCache {
     
+    public InMemoryDisabledApiCacheService() {
+        log.warn("⚠️  Redis를 사용할 수 없습니다 - 인메모리 캐시로 비활성화 API 관리 (서버 재시작 시 데이터 손실)");
+    }
+    
     // 인메모리 저장소 (Thread-safe)
     private final Set<String> disabledApis = ConcurrentHashMap.newKeySet();
     
@@ -29,17 +33,6 @@ public class InMemoryDisabledApiCacheService implements DisabledApiCache {
     public Set<String> getDisabledApis() {
         log.debug("Getting disabled APIs from in-memory cache. Count: {}", disabledApis.size());
         return new HashSet<>(disabledApis);
-    }
-    
-    /**
-     * 특정 API가 비활성화되었는지 확인.
-     * @param apiId 확인할 API의 ID
-     * @return 비활성화 여부 (true: 비활성화됨)
-     */
-    public boolean isApiDisabled(String apiId) {
-        boolean disabled = disabledApis.contains(apiId);
-        log.debug("Checking if API {} is disabled: {}", apiId, disabled);
-        return disabled;
     }
 
 }

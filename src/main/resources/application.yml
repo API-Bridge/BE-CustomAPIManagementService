@@ -7,9 +7,9 @@ spring:
 
   # JPA 설정 (Amazon Corretto 17 최적화)
   jpa:
+    defer-datasource-initialization: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
         use_sql_comments: true
         jdbc:
@@ -19,6 +19,11 @@ spring:
         jdbc.batch_versioned_data: true
     show-sql: false
     open-in-view: false
+  
+  # SQL 초기화 설정
+  sql:
+    init:
+      mode: embedded
 
   # Kafka 설정
   kafka:
@@ -39,23 +44,22 @@ spring:
         acks: all
         retries: 3
 
-  # Redis (AWS Elastic Cache) 설정
-  spring:
-    data:
-      redis:
-        host: ${AWS_ELASTIC_CACHE_ENDPOINT}
-        port: 6379
-        # 인증이 필요한 경우 주석을 해제하고 비밀번호를 설정
-        # password: your-redis-password
-        lettuce:
-          pool:
-            max-active: 8
-            max-idle: 8
-            min-idle: 0
+  # Redis 설정 (최신 Spring Boot 표준 접두사 'spring.redis' 사용)
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    ssl:
+      enabled: ${REDIS_SSL_ENABLED:false}
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
 
   # 데이터베이스 설정
   datasource:
-    url: jdbc:mysql://${DB_URL:127.0.0.1}:3306/${DB_NAME:custom_api_service_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    url: jdbc:mysql://${DB_URL:127.0.0.1}:3306/${DB_NAME:custom_api_service_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true&characterEncoding=UTF-8
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:cell4086}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -190,12 +194,6 @@ spring:
   kafka:
     consumer:
       group-id: custom-api-svc-dev-group
-
-logging:
-  level:
-    org.example.customapisvc: DEBUG
-    org.springframework.security: DEBUG
-
 ---
 # 프로덕션 환경 설정
 spring:

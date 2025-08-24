@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -15,6 +14,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 
@@ -28,9 +28,10 @@ import java.time.Duration;
  * - Spring Cache 추상화를 위한 캐시 매니저 설정
  * - TTL 및 캐시 정책 관리
  */
+@Slf4j
 @Configuration
 @EnableCaching
-@Profile("!dev")  // dev 프로필이 아닐 때만 Redis 설정 활성화
+// Redis 설정을 모든 프로필에서 활성화 (Docker/AWS 환경 모두 지원)
 public class RedisConfig {
 
     @Value("${spring.redis.host}")
@@ -55,9 +56,12 @@ public class RedisConfig {
 
         if (redisSslEnabled) {
             lettuceClientConfigurationBuilder.useSsl();
+            log.info("Redis SSL 연결이 활성화되었습니다 - 호스트: {}:{}", redisHost, redisPort);
         }
 
-        return new LettuceConnectionFactory(redisStandaloneConfiguration, lettuceClientConfigurationBuilder.build());
+        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(redisStandaloneConfiguration, lettuceClientConfigurationBuilder.build());
+        log.info("Redis 연결 팩토리 설정 완료 - 호스트: {}:{}, SSL: {}", redisHost, redisPort, redisSslEnabled);
+        return connectionFactory;
     }
 
     @Bean

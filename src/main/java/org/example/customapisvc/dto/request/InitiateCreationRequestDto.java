@@ -21,7 +21,6 @@ public class InitiateCreationRequestDto {
     @Schema(description = "API 생성을 요청한 사용자의 고유 ID (auth0_id)", example = "auth0|user123456", required = true)
     private String userId;
 
-
     @NotBlank(message = "커스텀 API ID는 필수입니다")
     @Schema(description = "사용자가 지정했거나 AI가 생성한 새 커스텀 API의 고유 ID", example = "weather-news-api-001", required = true)
     private String customApiId;

@@ -36,6 +36,15 @@ public class DisabledApiCacheService implements DisabledApiCache {
     @PostConstruct
     public void init() {
         this.setOperations = stringRedisTemplate.opsForSet();
+        try {
+            // Redis 연결 테스트
+            assert stringRedisTemplate.getConnectionFactory() != null;
+            stringRedisTemplate.getConnectionFactory().getConnection().ping();
+            log.info("✅ Redis 연결이 성공적으로 설정되었습니다 - Redis 기반 비활성화 API 캐시 사용");
+        } catch (Exception e) {
+            log.error("❌ Redis 연결에 실패했습니다: {}", e.getMessage());
+            throw new RuntimeException("Redis 연결 실패", e);
+        }
     }
 
     /**
@@ -46,12 +55,4 @@ public class DisabledApiCacheService implements DisabledApiCache {
         return setOperations.members(DISABLED_APIS_KEY);
     }
 
-    /**
-     * 특정 API가 비활성화되었는지 확인.
-     * @param apiId 확인할 API의 ID
-     * @return 비활성화 여부 (true: 비활성화됨)
-     */
-    public boolean isApiDisabled(String apiId) {
-        return Boolean.TRUE.equals(setOperations.isMember(DISABLED_APIS_KEY, apiId));
-    }
 }
