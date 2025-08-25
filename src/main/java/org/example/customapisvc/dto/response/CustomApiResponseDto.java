@@ -32,12 +32,13 @@ public class CustomApiResponseDto {
     @Schema(description = "외부API 이름 및 호출구조", example = "[{'api_name':'날씨 조회 API'}]")
     private List<ExternalApiInfoDto> externalApiUrl_list;
 
+    @Schema(description = "AI Plus 활성화 여부", example = "false")
+    private Boolean aiPlusActive;
+
     @Schema(description = "생성일시", example = "2023-08-08T10:30:00")
     private LocalDateTime createdAt;
 
     @Schema(description = "수정일시", example = "2023-08-08T10:30:00")
     private LocalDateTime updatedAt;
 
-    public CustomApiResponseDto(String s, String s1, String 날씨_조회_api, String 날씨_정보를_조회하는_api, LocalDateTime now, LocalDateTime now1) {
-    }
 }

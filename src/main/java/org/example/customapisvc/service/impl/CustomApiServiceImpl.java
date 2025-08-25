@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.customapisvc.domain.Entity.CustomApi;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
+import org.example.customapisvc.event.model.CustomApiDeletedEvent;
+import org.example.customapisvc.event.publisher.EventPublisherService;
 import org.example.customapisvc.repository.CustomApiRepository;
 import org.example.customapisvc.service.CustomApiService;
 import org.example.customapisvc.util.StructuredLogger;
@@ -23,6 +25,7 @@ public class CustomApiServiceImpl implements CustomApiService {
 
     private final CustomApiRepository customApiRepository;
     private final StructuredLogger structuredLogger;
+    private final EventPublisherService eventPublisherService;
 
     @Override
     public List<CustomApiResponseDto> getCustomApisByUserId(String userId) {
@@ -99,9 +102,33 @@ public class CustomApiServiceImpl implements CustomApiService {
                 throw new RuntimeException("커스텀API 삭제 권한이 없습니다. customApiId: " + customApiId);
             }
             
+            // 삭제 전에 이벤트 발행을 위한 데이터 수집
+            String apiName = customApi.getName();
+            String description = customApi.getDescription();
+            var externalApiList = customApi.getExternalApiUrlList();
+            
             // Soft Delete
             customApi.setDeleted(true);
             customApiRepository.save(customApi);
+            
+            // 커스텀 API 삭제 이벤트 발행
+            try {
+                CustomApiDeletedEvent deletedEvent = new CustomApiDeletedEvent(
+                    customApiId, userId, apiName, description, externalApiList, "USER_DELETION"
+                );
+                eventPublisherService.publishEvent("custom-api-events", deletedEvent);
+                
+                additionalFields.put("event_published", true);
+                structuredLogger.logBusinessEvent("CUSTOM_API_DELETED_EVENT_PUBLISHED", 
+                    "커스텀API가 성공적으로 삭제 되었습니다.", additionalFields);
+                
+            } catch (Exception eventException) {
+                additionalFields.put("event_published", false);
+                additionalFields.put("event_error", eventException.getMessage());
+                structuredLogger.logError("CUSTOM_API_DELETED_EVENT_PUBLISH_FAILED", 
+                    "Failed to publish custom API deletion event", eventException, additionalFields);
+                // 이벤트 발행 실패는 비즈니스 로직에 영향을 주지 않도록 로깅만 수행
+            }
             
             structuredLogger.logBusinessEvent("CUSTOM_API_DELETED", 
                 "Custom API successfully soft deleted", additionalFields);
@@ -150,6 +177,45 @@ public class CustomApiServiceImpl implements CustomApiService {
                 "Failed to process user deletion event", e, additionalFields);
             log.error("사용자 삭제 이벤트 처리 실패. userId: {}", userId, e);
             throw new RuntimeException("사용자 삭제 이벤트 처리 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public int deactivateCustomApisByExternalApiId(String externalApiId) {
+        log.info("외부 API 삭제 이벤트 처리 - 관련 커스텀 API 비활성화: {}", externalApiId);
+        
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("external_api_id", externalApiId);
+        
+        try {
+            // 비활성화 전 해당 외부 API를 사용하는 활성 커스텀 API 개수 조회
+            long activeApiCount = customApiRepository.countActiveCustomApisByExternalApiId(externalApiId);
+            additionalFields.put("active_api_count", activeApiCount);
+            
+            structuredLogger.logBusinessEvent("EXTERNAL_API_DELETED_EVENT_PROCESSING", 
+                "Processing external API deletion event - found " + activeApiCount + " active custom APIs", additionalFields);
+            
+            if (activeApiCount == 0) {
+                log.info("비활성화할 커스텀 API가 없습니다. externalApiId: {}", externalApiId);
+                return 0;
+            }
+            
+            // 해당 외부 API를 사용하는 모든 커스텀 API 비활성화 실행
+            int deactivatedCount = customApiRepository.deactivateAllByExternalApiId(externalApiId);
+            additionalFields.put("deactivated_count", deactivatedCount);
+            
+            structuredLogger.logBusinessEvent("EXTERNAL_API_CUSTOM_APIS_DEACTIVATED", 
+                "Successfully deactivated all custom APIs using deleted external API", additionalFields);
+            
+            log.info("외부 API 삭제 이벤트 처리 완료 - {} 개의 커스텀 API가 비활성화되었습니다. externalApiId: {}", deactivatedCount, externalApiId);
+            return deactivatedCount;
+            
+        } catch (Exception e) {
+            structuredLogger.logError("EXTERNAL_API_DELETION_EVENT_PROCESSING_FAILED", 
+                "Failed to process external API deletion event", e, additionalFields);
+            log.error("외부 API 삭제 이벤트 처리 실패. externalApiId: {}", externalApiId, e);
+            throw new RuntimeException("외부 API 삭제 이벤트 처리 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
     }
 

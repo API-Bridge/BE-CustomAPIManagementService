@@ -54,7 +54,6 @@ class AiCustomApiGenerationServiceTest extends BaseUnitTest {
     void setUp() {
         testRequest = new InitiateCreationRequestDto();
         testRequest.setUserId("auth0|user123456");
-        testRequest.setPlan("FREE");
         testRequest.setCustomApiId("weather-news-api-001");
         testRequest.setDomains(List.of("weather", "news"));
         testRequest.setKeywords(List.of("air_quality", "breaking_news"));

@@ -27,7 +27,8 @@ import java.util.List;
 @Table(name = "custom_api", indexes = {
     @Index(name = "idx_user_id", columnList = "user_id"),
     @Index(name = "idx_deleted", columnList = "deleted"),
-    @Index(name = "idx_user_id_deleted", columnList = "user_id, deleted")
+    @Index(name = "idx_user_id_deleted", columnList = "user_id, deleted"),
+    @Index(name = "idx_is_active", columnList = "is_active")
 })
 @Getter
 @Setter
@@ -53,6 +54,12 @@ public class CustomApi extends BaseEntity {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    @Column(name = "ai_plus_active", nullable = false)
+    private Boolean aiPlusActive = false;
 
     public void setExternalApiUrlList(List<ExternalApiInfoDto> externalApiUrlList) {
         this.externalApiUrlList = externalApiUrlList;

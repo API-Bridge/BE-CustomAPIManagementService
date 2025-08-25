@@ -63,7 +63,6 @@ class AiCustomApiGenerationServiceImplTest {
         requestDto.setDomains(Collections.singletonList("Weather"));
         requestDto.setKeywords(Collections.singletonList("Current"));
         requestDto.setUserQuery("Get current weather");
-        requestDto.setPlan("FREE");
     }
 
     @Test

@@ -1,5 +1,6 @@
 package org.example.customapisvc.event.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -16,13 +17,6 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = true)
 public class UserDeletedEvent extends BaseEvent {
 
-    /** 삭제된 사용자의 ID */
-    private String userId;
-    
-    /** 사용자 삭제 사유 (선택사항) */
-    private String deletionReason;
-
-
     /**
      * 사용자 삭제 이벤트 생성자 (삭제 사유 포함)
      * 
@@ -30,8 +24,29 @@ public class UserDeletedEvent extends BaseEvent {
      * @param deletionReason 삭제 사유
      */
     public UserDeletedEvent(String userId, String deletionReason) {
-        super("USER_DELETED");
-        this.userId = userId;
-        this.deletionReason = deletionReason;
+        super("UserDeleted");
+        this.payload = new UserDeletedPayload(userId, deletionReason);
+    }
+
+    /** 이벤트의 실제 내용을 담는 페이로드 */
+    private UserDeletedPayload payload;
+
+    @Override
+    public UserDeletedPayload getPayload() {
+        return payload;
+    }
+
+    /**
+     * 사용자 삭제 이벤트의 페이로드
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UserDeletedPayload {
+        /** 삭제된 사용자의 ID */
+        private String userId;
+        
+        /** 사용자 삭제 사유 (선택사항) */
+        private String deletionReason;
     }
 }

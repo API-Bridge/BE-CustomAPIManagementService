@@ -62,8 +62,7 @@ class UserEventListenerTest {
     @Test
     void handleUserDeletedEvent_shouldSkipWhenUserIdIsNull() {
         // Given
-        UserDeletedEvent invalidEvent = new UserDeletedEvent();
-        invalidEvent.setUserId(null);
+        UserDeletedEvent invalidEvent = new UserDeletedEvent(null, "테스트 삭제 사유");
         
         // When
         userEventListener.handleUserDeletedEvent(invalidEvent, 0, 100L, acknowledgment);
@@ -77,8 +76,7 @@ class UserEventListenerTest {
     @Test
     void handleUserDeletedEvent_shouldSkipWhenUserIdIsBlank() {
         // Given
-        UserDeletedEvent invalidEvent = new UserDeletedEvent();
-        invalidEvent.setUserId("   ");
+        UserDeletedEvent invalidEvent = new UserDeletedEvent("   ", "테스트 삭제 사유");
         
         // When
         userEventListener.handleUserDeletedEvent(invalidEvent, 0, 100L, acknowledgment);

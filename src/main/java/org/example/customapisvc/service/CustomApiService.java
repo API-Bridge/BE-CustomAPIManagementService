@@ -1,5 +1,6 @@
 package org.example.customapisvc.service;
 
+import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,7 @@ public interface CustomApiService {
     List<CustomApiResponseDto> searchCustomApisByName(String userId, String name);
 
 
-    //커스텀 API 삭제 (Soft Delete)
+    //커스텀 API 삭제 (Soft Delete) - 이벤트 발행 포함
     void deleteCustomApi(String customApiId, String userId);
 
     /**
@@ -29,4 +30,13 @@ public interface CustomApiService {
      * @return 삭제 처리된 커스텀 API 개수
      */
     int deleteAllCustomApisByUserId(String userId);
+
+    /**
+     * 특정 외부 API를 사용하는 모든 커스텀 API 비활성화
+     * 외부 API 삭제 이벤트 수신 시 호출되어 해당 외부 API를 사용하는 모든 커스텀 API를 비활성화 처리
+     * 
+     * @param externalApiId 비활성화할 외부 API ID
+     * @return 비활성화 처리된 커스텀 API 개수
+     */
+    int deactivateCustomApisByExternalApiId(String externalApiId);
 }

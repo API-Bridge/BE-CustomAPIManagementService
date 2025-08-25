@@ -41,4 +41,27 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
      */
     @Query("SELECT COUNT(ca) FROM CustomApi ca WHERE ca.userId = :userId AND ca.deleted = false")
     long countActiveCustomApisByUserId(@Param("userId") String userId);
+
+    /**
+     * 특정 외부 API를 사용하는 모든 커스텀 API를 비활성화 처리
+     * 외부 API 삭제 이벤트 수신 시 호출되어 해당 외부 API를 사용하는 모든 커스텀 API를 isActive=false로 설정
+     * 
+     * @param externalApiId 비활성화할 외부 API ID
+     * @return 비활성화 처리된 커스텀 API 개수
+     */
+    @Modifying
+    @Query("UPDATE CustomApi ca SET ca.isActive = false, ca.updatedAt = CURRENT_TIMESTAMP " +
+           "WHERE ca.deleted = false AND ca.isActive = true AND " +
+           "JSON_CONTAINS(ca.externalApiUrlListJson, JSON_OBJECT('id', :externalApiId))")
+    int deactivateAllByExternalApiId(@Param("externalApiId") String externalApiId);
+
+    /**
+     * 특정 외부 API를 사용하는 삭제되지 않고 활성화된 커스텀 API 개수 조회
+     * 
+     * @param externalApiId 조회할 외부 API ID
+     * @return 해당 외부 API를 사용하는 활성 커스텀 API 개수
+     */
+    @Query("SELECT COUNT(ca) FROM CustomApi ca WHERE ca.deleted = false AND ca.isActive = true AND " +
+           "JSON_CONTAINS(ca.externalApiUrlListJson, JSON_OBJECT('id', :externalApiId))")
+    long countActiveCustomApisByExternalApiId(@Param("externalApiId") String externalApiId);
 }

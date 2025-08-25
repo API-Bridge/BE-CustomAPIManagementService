@@ -12,6 +12,9 @@ import org.example.customapisvc.dto.request.ExternalApiRequestDto;
 import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
 import org.example.customapisvc.dto.response.ExternalApiResponseDto;
+import org.example.customapisvc.event.model.CustomApiCreatedEvent;
+import org.example.customapisvc.event.model.CustomApiCreateFailedEvent;
+import org.example.customapisvc.event.publisher.EventPublisherService;
 import org.example.customapisvc.repository.CustomApiRepository;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
 import org.example.customapisvc.service.ExternalApiService;
@@ -39,6 +42,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
     private final UserService userService;
     private final DisabledApiCache disabledApiCache;
     private final ObjectMapper objectMapper;
+    private final EventPublisherService eventPublisherService;
 
     @Override
     @Transactional
@@ -89,6 +93,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
             customApi.setName(metadata.getName());
             customApi.setDescription(metadata.getDescription());
             customApi.setExternalApiUrlList(metadata.getSelectedExternalApis());
+            customApi.setAiPlusActive(request.getAiPlusActive() != null ? request.getAiPlusActive() : false);
             customApi.setCreatedAt(LocalDateTime.now());
             customApi.setUpdatedAt(LocalDateTime.now());
             customApi.setDeleted(false);
@@ -96,6 +101,23 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
             CustomApi savedApi = customApiRepository.save(customApi);
 
             log.info("AI 커스텀 API 생성 완료 - customApiId: {}", savedApi.getCustomApiId());
+
+            // 커스텀 API 생성 이벤트 발행
+            try {
+                CustomApiCreatedEvent createdEvent = new CustomApiCreatedEvent(
+                    savedApi.getCustomApiId(),
+                    savedApi.getUserId(),
+                    savedApi.getName(),
+                    savedApi.getDescription(),
+                    savedApi.getExternalApiUrlList()
+                );
+                eventPublisherService.publishEvent("custom-api-events", createdEvent);
+                log.info("커스텀 API 생성 이벤트 발행 성공 - customApiId: {}", savedApi.getCustomApiId());
+                
+            } catch (Exception eventException) {
+                log.error("커스텀 API 생성 이벤트 발행 실패 - customApiId: {}", savedApi.getCustomApiId(), eventException);
+                // 이벤트 발행 실패는 비즈니스 로직에 영향을 주지 않도록 로깅만 수행
+            }
 
             // 5단계: 응답 DTO 생성
             return new CustomApiResponseDto(
@@ -110,6 +132,25 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
 
         } catch (Exception e) {
             log.error("AI 커스텀 API 생성 실패 - customApiId: {}", request.getCustomApiId(), e);
+            
+            // 커스텀 API 생성 실패 이벤트 발행
+            try {
+                String failureStage = determineFailureStage(e);
+                CustomApiCreateFailedEvent failedEvent = new CustomApiCreateFailedEvent(
+                    request.getUserId(),
+                    request.getCustomApiId(),
+                    "AI_GENERATION_FAILED",
+                    e.getMessage(),
+                    failureStage
+                );
+                eventPublisherService.publishEvent("custom-api-events", failedEvent);
+                log.info("커스텀 API 생성 실패 이벤트 발행 성공 - customApiId: {}", request.getCustomApiId());
+                
+            } catch (Exception eventException) {
+                log.error("커스텀 API 생성 실패 이벤트 발행 실패 - customApiId: {}", request.getCustomApiId(), eventException);
+                // 이벤트 발행 실패는 비즈니스 로직에 영향을 주지 않음
+            }
+            
             throw new RuntimeException("AI를 활용한 커스텀 API 생성에 실패했습니다: " + e.getMessage());
         }
     }
@@ -239,6 +280,24 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
         }
 
         return new CustomApiMetadata(name, description, selectedExternalApis);
+    }
+
+    /**
+     * 예외를 분석하여 실패 단계를 결정
+     */
+    private String determineFailureStage(Exception e) {
+        String message = e.getMessage();
+        if (message.contains("사용 가능한 외부 API가 없습니다")) {
+            return "EXTERNAL_API_VALIDATION";
+        } else if (message.contains("Gemini") || message.contains("AI")) {
+            return "AI_GENERATION";
+        } else if (message.contains("Database") || message.contains("save")) {
+            return "DATABASE_SAVE";
+        } else if (message.contains("User") || message.contains("플랜")) {
+            return "USER_VALIDATION";
+        } else {
+            return "UNKNOWN";
+        }
     }
 
     /**

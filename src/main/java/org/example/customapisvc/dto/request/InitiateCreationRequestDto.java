@@ -37,4 +37,9 @@ public class InitiateCreationRequestDto {
     @Schema(description = "사용자가 원하는 커스텀 API의 기능 설명", example = "서울의 현재 날씨와 미세먼지 정보를 확인하고 야외 활동 추천을 받고 싶어", required = true)
     private String userQuery;
 
+    @Schema(description = "AI Plus 활성화 여부", example = "false")
+    private Boolean aiPlusActive = false;
+
+    public <E> InitiateCreationRequestDto(String s, String free, String s1, List<E> weather, List<E> airQuality, String s2) {
+    }
 }

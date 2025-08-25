@@ -55,24 +55,25 @@ public class UserEventListener {
             Acknowledgment acknowledgment) {
         
         log.info("사용자 삭제 이벤트 수신 - eventId: {}, userId: {}, partition: {}, offset: {}", 
-                userDeletedEvent.getEventId(), userDeletedEvent.getUserId(), partition, offset);
+                userDeletedEvent.getEventId(), userDeletedEvent.getPayload().getUserId(), partition, offset);
         
         Map<String, Object> additionalFields = new HashMap<>();
         additionalFields.put("event_id", userDeletedEvent.getEventId());
-        additionalFields.put("user_id", userDeletedEvent.getUserId());
+        additionalFields.put("trace_id", userDeletedEvent.getTraceId());
+        additionalFields.put("user_id", userDeletedEvent.getPayload().getUserId());
         additionalFields.put("event_type", userDeletedEvent.getEventType());
-        additionalFields.put("source_service", userDeletedEvent.getSourceService());
-        additionalFields.put("correlation_id", userDeletedEvent.getCorrelationId());
+        additionalFields.put("service_name", userDeletedEvent.getServiceName());
         additionalFields.put("partition", partition);
         additionalFields.put("offset", offset);
-        additionalFields.put("deletion_reason", userDeletedEvent.getDeletionReason());
+        additionalFields.put("deletion_reason", userDeletedEvent.getPayload().getDeletionReason());
         
         try {
             structuredLogger.logBusinessEvent("USER_DELETED_EVENT_RECEIVED", 
                 "Received user deletion event from Kafka", additionalFields);
             
             // 사용자 ID 유효성 검증
-            if (userDeletedEvent.getUserId() == null || userDeletedEvent.getUserId().trim().isEmpty()) {
+            String userId = userDeletedEvent.getPayload().getUserId();
+            if (userId == null || userId.trim().isEmpty()) {
                 structuredLogger.logError("INVALID_USER_DELETED_EVENT", 
                     "User ID is null or empty in user deletion event", new IllegalArgumentException("Invalid userId"), additionalFields);
                 log.error("유효하지 않은 사용자 삭제 이벤트: userId가 null 또는 빈 문자열입니다.");
@@ -81,14 +82,14 @@ public class UserEventListener {
             }
             
             // 해당 사용자의 모든 커스텀 API 삭제 처리
-            int deletedCount = customApiService.deleteAllCustomApisByUserId(userDeletedEvent.getUserId());
+            int deletedCount = customApiService.deleteAllCustomApisByUserId(userId);
             additionalFields.put("deleted_custom_apis_count", deletedCount);
             
             structuredLogger.logBusinessEvent("USER_DELETED_EVENT_PROCESSED", 
                 "Successfully processed user deletion event", additionalFields);
             
             log.info("사용자 삭제 이벤트 처리 완료 - userId: {}, 삭제된 커스텀 API 개수: {}", 
-                    userDeletedEvent.getUserId(), deletedCount);
+                    userId, deletedCount);
             
             // 메시지 처리 완료 확인 (수동 커밋)
             acknowledgment.acknowledge();
@@ -98,7 +99,7 @@ public class UserEventListener {
                 "Failed to process user deletion event", e, additionalFields);
             
             log.error("사용자 삭제 이벤트 처리 중 오류 발생 - eventId: {}, userId: {}", 
-                    userDeletedEvent.getEventId(), userDeletedEvent.getUserId(), e);
+                    userDeletedEvent.getEventId(), userDeletedEvent.getPayload().getUserId(), e);
             
             // 에러 발생 시에도 메시지를 확인하여 재처리 방지
             // 실제 운영환경에서는 DLQ(Dead Letter Queue) 설정을 고려해야 함

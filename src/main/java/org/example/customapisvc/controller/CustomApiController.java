@@ -62,8 +62,13 @@ public class CustomApiController {
             @Parameter(description = "AI 커스텀 API 생성 개시 요청", required = true)
             @Valid @RequestBody InitiateCreationRequestDto request) {
         
-        CustomApiResponseDto customApi = aiCustomApiGenerationService.generateCustomApiWithAi(request);
-        return BaseResponse.success(customApi, "AI를 통해 커스텀 API가 성공적으로 생성되었습니다.");
+        try {
+            CustomApiResponseDto customApi = aiCustomApiGenerationService.generateCustomApiWithAi(request);
+            return BaseResponse.success(customApi, "AI를 통해 커스텀 API가 성공적으로 생성되었습니다.");
+        } catch (Exception e) {
+            // 생성 실패 시 별도 처리는 AiCustomApiGenerationService에서 담당
+            throw e;
+        }
     }
 
     @Operation(summary = "커스텀 API 삭제", description = "커스텀 API를 삭제합니다. (Soft Delete 방식)")
