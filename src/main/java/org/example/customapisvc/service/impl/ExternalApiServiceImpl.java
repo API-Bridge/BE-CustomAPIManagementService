@@ -5,12 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.customapisvc.dto.ExternalApiInfoDto;
 import org.example.customapisvc.dto.request.ExternalApiRequestDto;
 import org.example.customapisvc.dto.response.ExternalApiResponseDto;
-import org.example.customapisvc.dto.response.ExternalApiServiceResponseDto;
+import org.example.customapisvc.dto.response.ExternalApiSpecResponseDto;
 import org.example.customapisvc.service.ExternalApiService;
 import org.example.customapisvc.util.StructuredLogger;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -39,21 +38,37 @@ public class ExternalApiServiceImpl implements ExternalApiService {
         additionalFields.put("domains", request.getDomains());
         additionalFields.put("keywords", request.getKeywords());
         additionalFields.put("external_service", "external-api-service");
-        additionalFields.put("endpoint", "/api/v1/external-apis/bulk-search");
+        additionalFields.put("endpoint", "/api/v1/api/external-api-specs/search-by-name");
         
         long startTime = System.currentTimeMillis();
         
         try {
-            structuredLogger.logBusinessEvent("EXTERNAL_API_REQUEST_START", 
+            structuredLogger.logBusinessEvent("EXTERNAL_API_REQUEST_START",
                 "Started external API search request", additionalFields);
                 
             // 실제 외부API 관리서비스 응답을 받음
-            ExternalApiServiceResponseDto rawResponse = externalApiWebClient
-                    .post()
-                    .uri("/api/v1/external-apis/bulk-search") // 외부API서비스의 엔드포인트
-                    .body(Mono.just(request), ExternalApiRequestDto.class)
+            List<ExternalApiSpecResponseDto> rawResponse = externalApiWebClient
+                    .get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/api/v1/api/external-api-specs/search-by-name");
+                        
+                        // 여러 도메인을 쿼리 파라미터로 추가 (콤마로 구분된 문자열 형태)
+                        if (request.getDomains() != null && !request.getDomains().isEmpty()) {
+                            String domainsParam = String.join(",", request.getDomains());
+                            uriBuilder.queryParam("domains", domainsParam);
+                        }
+                        
+                        // 여러 키워드를 쿼리 파라미터로 추가 (콤마로 구분된 문자열 형태)
+                        if (request.getKeywords() != null && !request.getKeywords().isEmpty()) {
+                            String keywordsParam = String.join(",", request.getKeywords());
+                            uriBuilder.queryParam("keywords", keywordsParam);
+                        }
+                        
+                        return uriBuilder.build();
+                    })
                     .retrieve()
-                    .bodyToMono(ExternalApiServiceResponseDto.class)
+                    .bodyToFlux(ExternalApiSpecResponseDto.class)
+                    .collectList()
                     .retryWhen(Retry.backoff(3, Duration.ofMillis(1000))
                             .maxBackoff(Duration.ofSeconds(5)))
                     .timeout(Duration.ofSeconds(10))
@@ -95,74 +110,53 @@ public class ExternalApiServiceImpl implements ExternalApiService {
     }
 
     /**
-     * 외부API 관리서비스 응답을 우리 표준 형식으로 변환
+     * 외부API 명세서 서비스 응답을 우리 표준 형식으로 변환
      */
-    private ExternalApiResponseDto convertToStandardFormat(ExternalApiServiceResponseDto rawResponse) {
-        if (rawResponse == null || rawResponse.getData() == null || rawResponse.getData().getResults() == null) {
-            log.warn("외부API 관리서비스에서 빈 응답을 받았습니다.");
+    private ExternalApiResponseDto convertToStandardFormat(List<ExternalApiSpecResponseDto> rawResponse) {
+        if (rawResponse == null || rawResponse.isEmpty()) {
+            log.warn("외부API 명세서 서비스에서 빈 응답을 받았습니다.");
             return new ExternalApiResponseDto(new ArrayList<>());
         }
 
         List<ExternalApiInfoDto> externalApiList = new ArrayList<>();
         
-        // 각 카테고리별 API들을 순회하며 변환
-        for (Map.Entry<String, List<ExternalApiServiceResponseDto.ApiWithParameters>> entry : 
-             rawResponse.getData().getResults().entrySet()) {
-            
-            String category = entry.getKey();
-            List<ExternalApiServiceResponseDto.ApiWithParameters> apiList = entry.getValue();
-            
-            for (ExternalApiServiceResponseDto.ApiWithParameters apiWithParams : apiList) {
-                if (apiWithParams.getApi() != null) {
-                    ExternalApiInfoDto convertedApi = convertToExternalApiInfoDto(apiWithParams, category);
-                    externalApiList.add(convertedApi);
-                }
+        // 각 API 명세서를 순회하며 변환
+        for (ExternalApiSpecResponseDto apiSpec : rawResponse) {
+            if (apiSpec != null) {
+                ExternalApiInfoDto convertedApi = convertToExternalApiInfoDto(apiSpec);
+                externalApiList.add(convertedApi);
             }
         }
         
-        log.info("외부API 관리서비스 응답을 변환 완료: {} -> {} 개의 API", 
-                rawResponse.getData().getTotalCount(), externalApiList.size());
+        log.info("외부API 명세서 서비스 응답을 변환 완료: {} 개의 API", externalApiList.size());
         
         return new ExternalApiResponseDto(externalApiList);
     }
 
     /**
-     * 단일 API 정보를 우리 형식으로 변환
+     * 단일 API 명세서 정보를 우리 형식으로 변환
      */
-    private ExternalApiInfoDto convertToExternalApiInfoDto(ExternalApiServiceResponseDto.ApiWithParameters apiWithParams, String category) {
-        ExternalApiServiceResponseDto.ApiInfo api = apiWithParams.getApi();
-        List<ExternalApiServiceResponseDto.ParameterInfo> paramInfos = apiWithParams.getParameters();
-        
+    private ExternalApiInfoDto convertToExternalApiInfoDto(ExternalApiSpecResponseDto apiSpec) {
         // 파라미터 변환
         List<ExternalApiInfoDto.ApiParameter> convertedParams = new ArrayList<>();
-        if (paramInfos != null) {
-            for (ExternalApiServiceResponseDto.ParameterInfo paramInfo : paramInfos) {
-                // paramType 매핑: STRING -> INPUT, 실제 OUTPUT 파라미터는 별도 로직 필요
-                String paramType = determineParamType(paramInfo);
-                
+        if (apiSpec.getParameters() != null) {
+            for (ExternalApiSpecResponseDto.ParameterInfo paramInfo : apiSpec.getParameters()) {
                 ExternalApiInfoDto.ApiParameter convertedParam = new ExternalApiInfoDto.ApiParameter(
+                    paramInfo.getParameterId(),
                     paramInfo.getParamName(),
-                    paramType,
+                    paramInfo.getParamType(),
+                    paramInfo.isRequired(),
                     paramInfo.getParamDescription(),
-                    paramInfo.isRequired()
+                    paramInfo.getDefaultValue()
                 );
                 convertedParams.add(convertedParam);
             }
         }
         
         return new ExternalApiInfoDto(
-            api.getApiId(),
-            api.getApiName(),
+            apiSpec.getApiId(),
+            apiSpec.getApiName(),
             convertedParams
         );
-    }
-
-    /**
-     * 파라미터 타입 결정 로직
-     */
-    private String determineParamType(ExternalApiServiceResponseDto.ParameterInfo paramInfo) {
-        // 현재는 모든 파라미터를 INPUT으로 처리
-        // 실제로는 API 스키마 정보를 기반으로 OUTPUT 파라미터도 식별해야 함
-        return "INPUT";
     }
 }

@@ -50,9 +50,9 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
      * @return 비활성화 처리된 커스텀 API 개수
      */
     @Modifying
-    @Query("UPDATE CustomApi ca SET ca.isActive = false, ca.updatedAt = CURRENT_TIMESTAMP " +
-           "WHERE ca.deleted = false AND ca.isActive = true AND " +
-           "JSON_CONTAINS(ca.externalApiUrlListJson, JSON_OBJECT('id', :externalApiId))")
+    @Query(value = "UPDATE custom_api ca SET ca.is_active = false, ca.updated_at = CURRENT_TIMESTAMP " +
+           "WHERE ca.deleted = false AND ca.is_active = true AND " +
+           "JSON_CONTAINS(ca.external_api_url_list_json, JSON_OBJECT('id', :externalApiId))", nativeQuery = true)
     int deactivateAllByExternalApiId(@Param("externalApiId") String externalApiId);
 
     /**
@@ -61,7 +61,7 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
      * @param externalApiId 조회할 외부 API ID
      * @return 해당 외부 API를 사용하는 활성 커스텀 API 개수
      */
-    @Query("SELECT COUNT(ca) FROM CustomApi ca WHERE ca.deleted = false AND ca.isActive = true AND " +
-           "JSON_CONTAINS(ca.externalApiUrlListJson, JSON_OBJECT('id', :externalApiId))")
+    @Query(value = "SELECT COUNT(ca.custom_api_id) FROM custom_api ca WHERE ca.deleted = false AND ca.is_active = true AND " +
+           "JSON_CONTAINS(ca.external_api_url_list_json, JSON_OBJECT('id', :externalApiId))", nativeQuery = true)
     long countActiveCustomApisByExternalApiId(@Param("externalApiId") String externalApiId);
 }

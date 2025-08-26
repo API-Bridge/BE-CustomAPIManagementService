@@ -1,7 +1,6 @@
 package org.example.customapisvc.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,7 +12,6 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "커스텀 API 응답")
 public class CustomApiResponseDto {
 
@@ -41,4 +39,24 @@ public class CustomApiResponseDto {
     @Schema(description = "수정일시", example = "2023-08-08T10:30:00")
     private LocalDateTime updatedAt;
 
+    public CustomApiResponseDto(String customApiId, String userId, String name, String description, List<ExternalApiInfoDto> externalApiUrlList, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.customApiId = customApiId;
+        this.userId = userId;
+        this.name = name;
+        this.description = description;
+        this.externalApiUrl_list = externalApiUrlList;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public CustomApiResponseDto(String customApiId, String userId, String name, String description, List<ExternalApiInfoDto> externalApiUrlList, Boolean aiPlusActive, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.customApiId = customApiId;
+        this.userId = userId;
+        this.name = name;
+        this.description = description;
+        this.externalApiUrl_list = externalApiUrlList;
+        this.aiPlusActive = aiPlusActive;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 }

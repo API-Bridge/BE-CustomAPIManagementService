@@ -126,6 +126,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
                     savedApi.getName(),
                     savedApi.getDescription(),
                     savedApi.getExternalApiUrlList(),
+                    savedApi.getAiPlusActive(),
                     savedApi.getCreatedAt(),
                     savedApi.getUpdatedAt()
             );
@@ -179,8 +180,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
                 **분석 요청:**
                 1. 사용자의 요구사항을 분석하여 가장 적절한 외부 API를 최대 %d개까지 선별해주세요
                 2. 선별 기준: 사용자 요구사항과의 연관성, API 기능의 적합성, 파라미터의 유용성
-                3. 선별된 API들의 데이터 의존성을 분석하여 호출 순서를 결정해주세요
-                4. 병렬 호출이 가능한 API들은 같은 호출 순서 번호를 부여하고 parallelGroup으로 표시해주세요
+                3. 각 API를 선택한 구체적인 이유를 제시해주세요
 
                 **응답 형식:**
                 반드시 다음 JSON 형식으로만 답변해주세요:
@@ -192,34 +192,13 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
                     {
                       "apiId": "선별된 API의 ID",
                       "apiName": "선별된 API의 이름",
-                      "callOrder": 1,
-                      "parallelGroup": "A",
-                      "reason": "이 API를 선택한 구체적인 이유",
-                      "dependency": "NONE",
-                      "parameters": [
-                        {
-                          "paramName": "파라미터 이름",
-                          "paramType": "INPUT/OUTPUT",
-                          "description": "파라미터 설명",
-                          "necessary": true
-                        }
-                      ]
+                      "reason": "이 API를 선택한 구체적인 이유"
                     }
                   ]
                 }
 
-                **호출 순서 결정 기준:**
-                - callOrder는 데이터 의존성을 기준으로 결정합니다 (1부터 시작)
-                - 다른 API의 출력값을 입력으로 사용하는 API는 더 높은 번호를 가집니다
-                - 데이터 의존성이 없어 병렬 호출이 가능한 API들은 같은 callOrder를 가집니다
-                - parallelGroup은 같은 callOrder 내에서 병렬 호출되는 API들을 구분합니다 (A, B, C...)
-                - dependency 필드에는 의존하는 API의 출력 파라미터를 명시하고, 의존성이 없으면 'NONE'을 입력합니다
-
                 **주의사항:**
                 - selectedApis 배열은 최대 %d개까지만 포함하세요
-                - 모든 API에 대해 parallelGroup과 dependency 필드는 반드시 포함해야 합니다
-                - 데이터 의존성을 정확히 분석하여 올바른 호출 순서를 결정하세요
-                - 병렬 처리 가능한 API들을 명확히 표시하세요
                 - JSON 형식 외의 다른 텍스트는 절대 포함하지 마세요
                 - 모든 텍스트는 한국어로 작성하세요
                 """,
@@ -266,16 +245,24 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
             for (int i = 0; i < selectedApisNode.size(); i++) {
                 JsonNode apiNode = selectedApisNode.get(i);
                 String apiId = apiNode.get("apiId").asText();
+                String apiName = apiNode.get("apiName").asText();
                 String reason = apiNode.get("reason").asText();
-                int callOrder = apiNode.has("callOrder") ? apiNode.get("callOrder").asInt() : i + 1;
                 
-                log.info("선별된 API {}: {} (호출순서: {}, 이유: {})", i + 1, apiId, callOrder, reason);
+                log.info("선별된 API {}: {} (이유: {})", i + 1, apiId, reason);
 
-                // 전체 외부 API 리스트에서 해당 API 찾아서 추가
+                // AI가 선별한 API 정보로 새로운 ExternalApiInfoDto 생성 (간소화된 버전)
+                ExternalApiInfoDto selectedApi = new ExternalApiInfoDto();
+                selectedApi.setApiId(apiId);
+                selectedApi.setApiName(apiName);
+                selectedApi.setReason(reason);
+                
+                // 원본 API에서 parameters 정보를 복사 (AI가 parameters를 생성하지 않으므로)
                 allExternalApis.stream()
                     .filter(api -> api.getApiId().equals(apiId))
                     .findFirst()
-                    .ifPresent(selectedExternalApis::add);
+                    .ifPresent(originalApi -> selectedApi.setParameters(originalApi.getParameters()));
+                
+                selectedExternalApis.add(selectedApi);
             }
         }
 

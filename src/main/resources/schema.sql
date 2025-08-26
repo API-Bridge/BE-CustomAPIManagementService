@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS custom_api (
     name VARCHAR(255) NOT NULL COMMENT '커스텀 API의 이름',
     description TEXT NULL COMMENT '커스텀 API에 대한 상세 설명',
     external_api_name JSON NULL COMMENT '선별된 외부 API 목록 정보 (JSON 형태)',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'API 활성화 상태',
+    ai_plus_active BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'AI+ 기능 활성화 상태',
     
     -- Audit Fields (BaseEntity)
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시 (자동 설정)',
@@ -24,7 +26,8 @@ CREATE TABLE IF NOT EXISTS custom_api (
     -- Indexes for Query Performance
     INDEX idx_user_id (user_id) COMMENT '사용자별 API 조회',
     INDEX idx_deleted (deleted) COMMENT '삭제되지 않은 API 조회',
-    INDEX idx_user_id_deleted (user_id, deleted) COMMENT '사용자별 활성 API 조회 (복합 인덱스)'
+    INDEX idx_user_id_deleted (user_id, deleted) COMMENT '사용자별 활성 API 조회 (복합 인덱스)',
+    INDEX idx_is_active (is_active) COMMENT 'API 활성화 상태 조회'
     
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
 COMMENT='사용자가 AI를 통해 생성한 커스텀 API의 메타데이터를 관리하는 테이블';

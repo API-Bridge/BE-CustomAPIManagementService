@@ -16,15 +16,24 @@ public class ExternalApiInfoDto {
     private String apiId;
     private String apiName;
     private List<ApiParameter> parameters;
-    
+    private String reason;
+
+    public ExternalApiInfoDto(String apiId, String apiName, List<ApiParameter> parameters) {
+        this.apiId = apiId;
+        this.apiName = apiName;
+        this.parameters = parameters;
+    }
+
     @Getter
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ApiParameter {
+        private String parameterId;
         private String paramName;
-        private String paramType; // INPUT, OUTPUT
-        private String description;
-        private boolean necessary; // TRUE, FALSE (INPUT 파라미터만 해당)
+        private String paramType;
+        private boolean isRequired;
+        private String paramDescription;
+        private String defaultValue;
     }
 }
