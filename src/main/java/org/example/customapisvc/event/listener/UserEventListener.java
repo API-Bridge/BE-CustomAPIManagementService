@@ -28,7 +28,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Profile("!dev")  // dev 프로필이 아닐 때만 활성화 (실제 Kafka 사용 시)
+// 모든 프로필에서 활성화
 public class UserEventListener {
 
     private final CustomApiService customApiService;

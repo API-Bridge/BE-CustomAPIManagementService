@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Profile("dev")  // dev 프로필에서만 활성화
+@Profile("disabled")  // 비활성화
 public class DevEventPublisher implements EventPublisherService {
 
     /**

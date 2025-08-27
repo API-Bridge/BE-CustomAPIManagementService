@@ -529,7 +529,8 @@ public class CustomApiServiceImpl implements CustomApiService {
                 customApi.getApiType(),
                 customApi.isPublic(),
                 originApiId,
-                ownerUserId
+                ownerUserId,
+                customApi.getCallCount() // 일일 호출 횟수 추가
         );
     }
 }

@@ -52,6 +52,9 @@ public class CustomApiResponseDto {
     @Schema(description = "수정일시", example = "2023-08-08T10:30:00")
     private LocalDateTime updatedAt;
 
+    @Schema(description = "일일 호출 횟수", example = "152")
+    private Long callCount;
+
     public CustomApiResponseDto(String customApiId, String userId, String name, String description, List<ExternalApiInfoDto> externalApiUrlList, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.customApiId = customApiId;
         this.userId = userId;
@@ -87,5 +90,22 @@ public class CustomApiResponseDto {
         this.isPublic = isPublic;
         this.originApiId = originApiId;
         this.ownerUserId = ownerUserId;
+    }
+
+    // 호출 횟수를 포함한 완전한 생성자
+    public CustomApiResponseDto(String customApiId, String userId, String name, String description, List<ExternalApiInfoDto> externalApiUrlList, Boolean aiPlusActive, LocalDateTime createdAt, LocalDateTime updatedAt, ApiType apiType, boolean isPublic, String originApiId, String ownerUserId, Long callCount) {
+        this.customApiId = customApiId;
+        this.userId = userId;
+        this.name = name;
+        this.description = description;
+        this.externalApiUrl_list = externalApiUrlList;
+        this.aiPlusActive = aiPlusActive;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.apiType = apiType;
+        this.isPublic = isPublic;
+        this.originApiId = originApiId;
+        this.ownerUserId = ownerUserId;
+        this.callCount = callCount;
     }
 }

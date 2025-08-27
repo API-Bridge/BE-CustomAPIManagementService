@@ -103,4 +103,33 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
     @Modifying
     @Query("UPDATE CustomApi ca SET ca.isActive = :isActive, ca.updatedAt = CURRENT_TIMESTAMP WHERE ca.customApiId IN :customApiIds AND ca.deleted = false")
     int updateActiveStatusByCustomApiIds(@Param("customApiIds") List<String> customApiIds, @Param("isActive") Boolean isActive);
+
+    /**
+     * Redis의 호출 횟수를 데이터베이스의 callCount에 누적
+     * 
+     * @param customApiId 커스텀 API ID
+     * @param count 누적할 호출 횟수
+     * @return 업데이트된 레코드 수
+     */
+    @Modifying
+    @Query("UPDATE CustomApi ca SET ca.callCount = ca.callCount + :count, ca.updatedAt = CURRENT_TIMESTAMP WHERE ca.customApiId = :customApiId AND ca.deleted = false")
+    int incrementCallCount(@Param("customApiId") String customApiId, @Param("count") Long count);
+
+    /**
+     * 모든 커스텀 API의 호출 횟수를 0으로 초기화 (일일 리셋)
+     * 
+     * @return 초기화된 레코드 수
+     */
+    @Modifying
+    @Query("UPDATE CustomApi ca SET ca.callCount = 0, ca.updatedAt = CURRENT_TIMESTAMP WHERE ca.deleted = false")
+    int resetAllCallCounts();
+
+    /**
+     * 특정 커스텀 API의 현재 호출 횟수 조회
+     * 
+     * @param customApiId 커스텀 API ID
+     * @return 현재 호출 횟수 (없으면 0)
+     */
+    @Query("SELECT ca.callCount FROM CustomApi ca WHERE ca.customApiId = :customApiId AND ca.deleted = false")
+    Long findCallCountByCustomApiId(@Param("customApiId") String customApiId);
 }

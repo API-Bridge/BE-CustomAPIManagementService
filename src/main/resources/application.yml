@@ -23,7 +23,8 @@ spring:
   # SQL 초기화 설정
   sql:
     init:
-      mode: embedded
+      mode: always
+      schema-locations: classpath:schema.sql
 
   # Kafka 설정
   kafka:

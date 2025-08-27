@@ -21,6 +21,7 @@ spring:
   sql:
     init:
       mode: never  # Repository 테스트에서는 직접 데이터 생성(sql 문법 문제)
+      schema-locations: classpath:schema-h2.sql  # H2 전용 스키마 사용
         
   h2:
     console:
@@ -36,6 +37,11 @@ spring:
   redis:
     host: localhost
     port: 6379
+    password: ""
+    
+# 스케줄링 비활성화 (테스트 환경)
+scheduling:
+  enabled: false
 
 logging:
   level:

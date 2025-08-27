@@ -61,13 +61,25 @@ class CustomApiControllerTest {
     void setUp() {
         now = LocalDateTime.now();
         
-        testResponse1 = new CustomApiResponseDto(
-                "api-001", "user-123", "날씨 조회 API",
-                "날씨 정보를 조회하는 API", Collections.emptyList(), now, now);
+        testResponse1 = new CustomApiResponseDto();
+        testResponse1.setCustomApiId("api-001");
+        testResponse1.setUserId("user-123");
+        testResponse1.setName("날씨 조회 API");
+        testResponse1.setDescription("날씨 정보를 조회하는 API");
+        testResponse1.setExternalApiUrl_list(Collections.emptyList());
+        testResponse1.setCreatedAt(now);
+        testResponse1.setUpdatedAt(now);
+        testResponse1.setCallCount(0L);
         
-        testResponse2 = new CustomApiResponseDto(
-                "api-002", "user-123", "상품 추천 API",
-                "사용자 맞춤 상품을 추천하는 API", Collections.emptyList(), now, now);
+        testResponse2 = new CustomApiResponseDto();
+        testResponse2.setCustomApiId("api-002");
+        testResponse2.setUserId("user-123");
+        testResponse2.setName("상품 추천 API");
+        testResponse2.setDescription("사용자 맞춤 상품을 추천하는 API");
+        testResponse2.setExternalApiUrl_list(Collections.emptyList());
+        testResponse2.setCreatedAt(now);
+        testResponse2.setUpdatedAt(now);
+        testResponse2.setCallCount(0L);
     }
 
     @Test
@@ -142,7 +154,7 @@ class CustomApiControllerTest {
     @DisplayName("GET /custom-apis/search - 이름으로 커스텀 API 검색 성공")
     void searchCustomApisByName_Success() throws Exception {
         // given
-        List<CustomApiResponseDto> mockResponse = Arrays.asList(testResponse1);
+        List<CustomApiResponseDto> mockResponse = List.of(testResponse1);
         given(customApiService.searchCustomApisByName("user-123", "날씨")).willReturn(mockResponse);
 
         // when & then
@@ -176,13 +188,15 @@ class CustomApiControllerTest {
         );
 
         // 2. AI 서비스가 반환할 응답을 미리 정의합니다.
-        CustomApiResponseDto mockResponse = new CustomApiResponseDto(
-                "my-custom-weather-api-1",
-                "auth0|user-test-12345",
-                "AI가 생성한 날씨 API",
-                "AI가 사용자의 요청에 따라 생성한 API입니다.",
-                externalApis,
-                now, now);
+        CustomApiResponseDto mockResponse = new CustomApiResponseDto();
+        mockResponse.setCustomApiId("my-custom-weather-api-1");
+        mockResponse.setUserId("auth0|user-test-12345");
+        mockResponse.setName("AI가 생성한 날씨 API");
+        mockResponse.setDescription("AI가 사용자의 요청에 따라 생성한 API입니다.");
+        mockResponse.setExternalApiUrl_list(externalApis);
+        mockResponse.setCreatedAt(now);
+        mockResponse.setUpdatedAt(now);
+        mockResponse.setCallCount(0L);
 
         // 3. Mockito 설정: any() 매처에 올바른 DTO 클래스(InitiateCreationRequest.class)를 사용합니다.
         given(aiCustomApiGenerationService.generateCustomApiWithAi(any(InitiateCreationRequestDto.class))).willReturn(mockResponse);

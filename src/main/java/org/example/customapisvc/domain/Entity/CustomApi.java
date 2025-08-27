@@ -83,6 +83,9 @@ public class CustomApi extends BaseEntity {
     @ToString.Exclude
     private List<CustomApi> linkedApis = new ArrayList<>(); // 원본 API에 연결된 링크들
 
+    @Column(name = "call_count", nullable = false)
+    private Long callCount = 0L; // 일일 호출 횟수
+
     public void setExternalApiUrlList(List<ExternalApiInfoDto> externalApiUrlList) {
         this.externalApiUrlList = externalApiUrlList;
         // 직렬화 (직렬화: 객체를 JSON으로 변환하는 과정)

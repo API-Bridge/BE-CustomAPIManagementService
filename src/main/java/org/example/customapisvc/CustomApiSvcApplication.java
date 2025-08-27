@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 /**
  * Custom API Service의 메인 애플리케이션 클래스
  * MSA 아키텍처에서 API 브리지 역할을 수행하는 Spring Boot 애플리케이션의 진입점
@@ -19,6 +20,7 @@ import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
     RedisRepositoriesAutoConfiguration.class,
     KafkaAutoConfiguration.class
 })
+@EnableScheduling
 public class CustomApiSvcApplication {
 
     /**

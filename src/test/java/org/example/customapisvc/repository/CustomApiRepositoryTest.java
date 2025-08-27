@@ -36,7 +36,9 @@ class CustomApiRepositoryTest {
     void setUp() {
         // 테스트 데이터 준비 - TestDataFactory 사용
         testCustomApi1 = TestDataFactory.CustomApiTestData.createCustomApi("api-001", "user-123", "날씨 조회 API", "날씨 정보를 조회하는 API", false);
+        testCustomApi1.setCallCount(5L); // 초기 호출 횟수 설정
         testCustomApi2 = TestDataFactory.CustomApiTestData.createCustomApi("api-002", "user-123", "상품 추천 API", "사용자 맞춤 상품을 추천하는 API", false);
+        testCustomApi2.setCallCount(10L); // 초기 호출 횟수 설정
         deletedCustomApi = TestDataFactory.CustomApiTestData.createCustomApi("api-003", "user-123", "삭제된 API", "삭제된 API", true);
         
         entityManager.persistAndFlush(testCustomApi1);
@@ -138,5 +140,101 @@ class CustomApiRepositoryTest {
         // DB에서 실제 조회 확인
         Optional<CustomApi> found = customApiRepository.findByCustomApiIdAndDeletedFalse("api-004");
         assertThat(found).isPresent();
+    }
+
+    @Test
+    @DisplayName("호출 횟수 증가 - 정상 케이스")
+    void incrementCallCount_Success() {
+        // given
+        String customApiId = "api-001";
+        Long incrementValue = 3L;
+        Long expectedCount = 8L; // 5 + 3
+
+        // when
+        int updated = customApiRepository.incrementCallCount(customApiId, incrementValue);
+
+        // then
+        assertThat(updated).isEqualTo(1);
+        
+        // 실제 DB에서 값 확인
+        Long actualCount = customApiRepository.findCallCountByCustomApiId(customApiId);
+        assertThat(actualCount).isEqualTo(expectedCount);
+    }
+
+    @Test
+    @DisplayName("호출 횟수 증가 - 존재하지 않는 API")
+    void incrementCallCount_NotExists() {
+        // given
+        String nonExistentApiId = "nonexistent-api";
+        Long incrementValue = 5L;
+
+        // when
+        int updated = customApiRepository.incrementCallCount(nonExistentApiId, incrementValue);
+
+        // then
+        assertThat(updated).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("호출 횟수 증가 - 삭제된 API")
+    void incrementCallCount_DeletedApi() {
+        // given
+        String deletedApiId = "api-003";
+        Long incrementValue = 2L;
+
+        // when
+        int updated = customApiRepository.incrementCallCount(deletedApiId, incrementValue);
+
+        // then
+        assertThat(updated).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("모든 호출 횟수 초기화")
+    void resetAllCallCounts() {
+        // given - testCustomApi1은 5, testCustomApi2는 10의 호출횟수를 가짐
+
+        // when
+        int updated = customApiRepository.resetAllCallCounts();
+
+        // then
+        assertThat(updated).isEqualTo(2); // 삭제되지 않은 API 2개
+
+        // 실제 값 확인
+        Long count1 = customApiRepository.findCallCountByCustomApiId("api-001");
+        Long count2 = customApiRepository.findCallCountByCustomApiId("api-002");
+        
+        assertThat(count1).isEqualTo(0L);
+        assertThat(count2).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("특정 API 호출 횟수 조회 - 정상 케이스")
+    void findCallCountByCustomApiId_Success() {
+        // when
+        Long count = customApiRepository.findCallCountByCustomApiId("api-001");
+
+        // then
+        assertThat(count).isEqualTo(5L);
+    }
+
+    @Test
+    @DisplayName("특정 API 호출 횟수 조회 - 존재하지 않는 API")
+    void findCallCountByCustomApiId_NotExists() {
+        // when
+        Long count = customApiRepository.findCallCountByCustomApiId("nonexistent-api");
+
+        // then
+        assertThat(count).isNull();
+    }
+
+    @Test
+    @DisplayName("특정 API 호출 횟수 조회 - 삭제된 API")
+    void findCallCountByCustomApiId_DeletedApi() {
+        // when
+        Long count = customApiRepository.findCallCountByCustomApiId("api-003");
+
+        // then
+        assertThat(count).isNull();
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
@@ -29,7 +30,7 @@ import java.util.Map;
  */
 @Configuration
 @EnableKafka
-@Profile("!dev")  // dev 프로필이 아닐 때만 Kafka 설정 활성화
+// 모든 프로필에서 활성화
 public class KafkaConfig {
 
     /** Kafka 브로커 서버 주소 */
@@ -90,6 +91,7 @@ public class KafkaConfig {
     /**
      * Kafka Listener Container Factory 빈 설정
      * @KafkaListener 애노테이션을 사용하여 메시지를 비동기로 처리할 수 있도록 지원
+     * 수동 커밋 모드로 설정하여 Acknowledgment 사용 가능
      * 
      * @return ConcurrentKafkaListenerContainerFactory<String, Object> Kafka Listener Container Factory
      */
@@ -97,6 +99,10 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        
+        // 수동 커밋 모드 설정 - Acknowledgment 사용을 위해 필수
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        
         return factory;
     }
 }
