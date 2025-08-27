@@ -1,5 +1,6 @@
 package org.example.customapisvc.repository;
 
+import org.example.customapisvc.domain.Entity.ApiType;
 import org.example.customapisvc.domain.Entity.CustomApi;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -65,4 +66,41 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
     @Query(value = "SELECT COUNT(ca.custom_api_id) FROM custom_api ca WHERE ca.deleted = false AND ca.is_active = true AND " +
            "JSON_CONTAINS(ca.external_api_url_list_json, JSON_OBJECT('id', :externalApiId))", nativeQuery = true)
     long countActiveCustomApisByExternalApiId(@Param("externalApiId") String externalApiId);
+
+    // 공유된 원본 API 목록 조회
+    List<CustomApi> findByIsPublicTrueAndApiTypeAndDeletedFalse(ApiType apiType);
+
+    // 사용자가 이미 특정 원본 API를 가져왔는지 확인
+    boolean existsByOriginApiAndUserIdAndDeletedFalse(CustomApi originApi, String userId);
+
+    /**
+     * 사용자의 모든 커스텀 API를 생성일시 역순으로 정렬하여 조회 (최근 생성된 것부터)
+     * 플랜 다운그레이드 시 최신 API부터 활성화하고 나머지는 비활성화하기 위해 사용
+     * 
+     * @param userId 조회할 사용자 ID
+     * @return 생성일시 역순으로 정렬된 커스텀 API 목록
+     */
+    @Query("SELECT ca FROM CustomApi ca WHERE ca.userId = :userId AND ca.deleted = false ORDER BY ca.createdAt DESC")
+    List<CustomApi> findByUserIdAndDeletedFalseOrderByCreatedAtDesc(@Param("userId") String userId);
+
+    /**
+     * 사용자의 삭제되지 않은 커스텀 API 목록을 생성일시 오름차순(오래된 순)으로 조회
+     * 
+     * @param userId 사용자 ID
+     * @return 생성일시 오름차순으로 정렬된 커스텀 API 목록
+     */
+    @Query("SELECT ca FROM CustomApi ca WHERE ca.userId = :userId AND ca.deleted = false ORDER BY ca.createdAt ASC")
+    List<CustomApi> findByUserIdAndDeletedFalseOrderByCreatedAtAsc(@Param("userId") String userId);
+
+    /**
+     * 특정 커스텀 API들의 활성화 상태를 일괄 업데이트
+     * 플랜 다운그레이드 시 특정 API들의 활성화 상태를 변경할 때 사용
+     * 
+     * @param customApiIds 업데이트할 커스텀 API ID 목록
+     * @param isActive 설정할 활성화 상태
+     * @return 업데이트된 커스텀 API 개수
+     */
+    @Modifying
+    @Query("UPDATE CustomApi ca SET ca.isActive = :isActive, ca.updatedAt = CURRENT_TIMESTAMP WHERE ca.customApiId IN :customApiIds AND ca.deleted = false")
+    int updateActiveStatusByCustomApiIds(@Param("customApiIds") List<String> customApiIds, @Param("isActive") Boolean isActive);
 }

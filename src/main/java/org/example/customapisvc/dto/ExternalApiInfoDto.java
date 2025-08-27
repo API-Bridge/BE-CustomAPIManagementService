@@ -35,5 +35,8 @@ public class ExternalApiInfoDto {
         private boolean isRequired;
         private String paramDescription;
         private String defaultValue;
+
+        public ApiParameter(String city, String string, String 날씨를_조회할_도시_이름, boolean b) {
+        }
     }
 }

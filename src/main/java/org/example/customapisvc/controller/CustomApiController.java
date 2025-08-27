@@ -84,4 +84,40 @@ public class CustomApiController {
         customApiService.deleteCustomApi(customApiId, userId);
         return BaseResponse.success(null, "커스텀 API가 성공적으로 삭제되었습니다.");
     }
+
+    @Operation(summary = "커스텀 API 공유 설정", description = "커스텀 API를 다른 사용자와 공유하거나 공유를 취소합니다.")
+    @PutMapping("/{customApiId}/share")
+    public BaseResponse<Void> shareCustomApi(
+            @Parameter(description = "커스텀 API ID", required = true, example = "api-001")
+            @PathVariable String customApiId,
+            @Parameter(description = "사용자 ID", required = true, example = "user-123")
+            @RequestParam String userId,
+            @Parameter(description = "공유 설정 (true: 공유, false: 공유 취소)", required = true, example = "true")
+            @RequestParam boolean share) {
+        
+        customApiService.shareCustomApi(customApiId, userId, share);
+        String message = share ? "커스텀 API가 성공적으로 공유되었습니다." : "커스텀 API 공유가 성공적으로 취소되었습니다.";
+        return BaseResponse.success(null, message);
+    }
+
+    @Operation(summary = "공유된 커스텀 API 목록 조회", description = "모든 사용자에게 공유된 커스텀 API 목록을 조회합니다.")
+    @GetMapping("/shared")
+    public BaseResponse<List<CustomApiResponseDto>> getSharedApis() {
+        
+        List<CustomApiResponseDto> sharedApis = customApiService.getSharedApis();
+        return BaseResponse.success(sharedApis, "공유된 커스텀 API 목록을 성공적으로 조회했습니다.");
+    }
+
+    @Operation(summary = "공유된 커스텀 API 가져오기", description = "공유된 커스텀 API를 현재 사용자의 대시보드로 가져옵니다.")
+    @PostMapping("/{originApiId}/import")
+    @ResponseStatus(HttpStatus.CREATED)
+    public BaseResponse<CustomApiResponseDto> importSharedApi(
+            @Parameter(description = "가져올 원본 API ID", required = true, example = "api-origin-001")
+            @PathVariable String originApiId,
+            @Parameter(description = "API를 가져오는 사용자 ID", required = true, example = "user-456")
+            @RequestParam String importerUserId) {
+        
+        CustomApiResponseDto importedApi = customApiService.importSharedApi(originApiId, importerUserId);
+        return BaseResponse.success(importedApi, "공유된 커스텀 API를 성공적으로 가져왔습니다.");
+    }
 }

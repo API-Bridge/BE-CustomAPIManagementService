@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.example.customapisvc.domain.Entity.ApiType;
 import org.example.customapisvc.dto.ExternalApiInfoDto;
 
 import java.time.LocalDateTime;
@@ -33,6 +34,18 @@ public class CustomApiResponseDto {
     @Schema(description = "AI Plus 활성화 여부", example = "false")
     private Boolean aiPlusActive;
 
+    @Schema(description = "API 타입 (ORIGINAL: 직접 생성, LINK: 가져온 API)", example = "ORIGINAL")
+    private ApiType apiType;
+
+    @Schema(description = "공개(공유) 여부", example = "false")
+    private boolean isPublic;
+
+    @Schema(description = "원본 API ID (가져온 API인 경우)", example = "api-origin-001")
+    private String originApiId;
+
+    @Schema(description = "원본 API 소유자 ID (가져온 API인 경우)", example = "user-creator-456")
+    private String ownerUserId;
+
     @Schema(description = "생성일시", example = "2023-08-08T10:30:00")
     private LocalDateTime createdAt;
 
@@ -58,5 +71,21 @@ public class CustomApiResponseDto {
         this.aiPlusActive = aiPlusActive;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    // 공유 기능을 포함한 새로운 생성자
+    public CustomApiResponseDto(String customApiId, String userId, String name, String description, List<ExternalApiInfoDto> externalApiUrlList, Boolean aiPlusActive, LocalDateTime createdAt, LocalDateTime updatedAt, ApiType apiType, boolean isPublic, String originApiId, String ownerUserId) {
+        this.customApiId = customApiId;
+        this.userId = userId;
+        this.name = name;
+        this.description = description;
+        this.externalApiUrl_list = externalApiUrlList;
+        this.aiPlusActive = aiPlusActive;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.apiType = apiType;
+        this.isPublic = isPublic;
+        this.originApiId = originApiId;
+        this.ownerUserId = ownerUserId;
     }
 }

@@ -2,6 +2,7 @@ package org.example.customapisvc.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.customapisvc.domain.Entity.ApiType;
 import org.example.customapisvc.domain.Entity.CustomApi;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
 import org.example.customapisvc.event.model.CustomApiDeletedEvent;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -58,11 +60,22 @@ public class CustomApiServiceImpl implements CustomApiService {
             CustomApi customApi = customApiRepository.findByCustomApiIdAndDeletedFalse(customApiId)
                     .orElseThrow(() -> new RuntimeException("커스텀API를 찾을 수 없습니다. customApiId: " + customApiId));
             
+            // LINK 타입인 경우, 원본 API의 상태를 확인
+            if (customApi.getApiType() == ApiType.LINK) {
+                CustomApi originApi = customApi.getOriginApi();
+                if (originApi == null || originApi.isDeleted()) {
+                    throw new RuntimeException("원본 API가 삭제되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+                if (!originApi.getIsActive()) {
+                    throw new RuntimeException("원본 API가 비활성화되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+            }
+            
             // 커스텀 API가 비활성화되어 있는지 확인
             if (!customApi.getIsActive()) {
                 structuredLogger.logBusinessEvent("CUSTOM_API_DISABLED_ACCESS_ATTEMPT", 
                     "Attempt to access disabled custom API", additionalFields);
-                throw new RuntimeException("의존되는 외부 API의 영향으로 이 커스텀 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                throw new RuntimeException("의존되는 외부 API의 영향으로 이 커스텀 API는 사용할 수 없습니다. 새 커스텀API 를 생성해주세요. customApiId: " + customApiId);
             }
             
             structuredLogger.logBusinessEvent("CUSTOM_API_RETRIEVED", 
@@ -226,16 +239,297 @@ public class CustomApiServiceImpl implements CustomApiService {
         }
     }
 
+    @Override
+    @Transactional
+    public void shareCustomApi(String customApiId, String userId, boolean share) {
+        log.info("커스텀API 공유 설정: {} to {} by user: {}", customApiId, share, userId);
+
+        CustomApi customApi = customApiRepository.findByCustomApiIdAndDeletedFalse(customApiId)
+                .orElseThrow(() -> new RuntimeException("커스텀API를 찾을 수 없습니다. customApiId: " + customApiId));
+
+        // 소유권 및 타입 확인
+        if (!customApi.getUserId().equals(userId)) {
+            throw new RuntimeException("API 공유 권한이 없습니다.");
+        }
+        if (customApi.getApiType() != ApiType.ORIGINAL) {
+            throw new RuntimeException("원본 API만 공유할 수 있습니다.");
+        }
+
+        customApi.setPublic(share);
+        customApiRepository.save(customApi);
+        log.info("Custom API {} share status set to {}", customApiId, share);
+    }
+
+    @Override
+    public List<CustomApiResponseDto> getSharedApis() {
+        log.debug("모든 공유된 커스텀API 조회");
+        List<CustomApi> sharedApis = customApiRepository.findByIsPublicTrueAndApiTypeAndDeletedFalse(ApiType.ORIGINAL);
+        return sharedApis.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public CustomApiResponseDto importSharedApi(String originApiId, String importerUserId) {
+        log.info("User {} is importing shared API {}", importerUserId, originApiId);
+
+        // 1. 원본 API 조회 및 검증
+        CustomApi originApi = customApiRepository.findByCustomApiIdAndDeletedFalse(originApiId)
+                .orElseThrow(() -> new RuntimeException("가져올 원본 API를 찾을 수 없습니다. ID: " + originApiId));
+
+        if (!originApi.isPublic() || originApi.getApiType() != ApiType.ORIGINAL) {
+            throw new RuntimeException("이 API는 공유되지 않았거나 원본 API가 아닙니다.");
+        }
+
+        // 2. 자기 자신의 API는 가져올 수 없음
+        if (originApi.getUserId().equals(importerUserId)) {
+            throw new RuntimeException("자기 자신의 API는 가져올 수 없습니다.");
+        }
+
+        // 3. 이미 가져왔는지 확인
+        if (customApiRepository.existsByOriginApiAndUserIdAndDeletedFalse(originApi, importerUserId)) {
+            throw new RuntimeException("이미 가져온 API입니다.");
+        }
+
+        // 4. LINK 타입의 새로운 CustomApi 엔티티 생성
+        CustomApi linkedApi = new CustomApi();
+        linkedApi.setCustomApiId(UUID.randomUUID().toString()); // 새로운 고유 ID 부여
+        linkedApi.setUserId(importerUserId); // 가져온 사람의 ID
+        linkedApi.setName(originApi.getName()); // 이름은 원본과 동일하게 시작
+        linkedApi.setDescription(originApi.getDescription()); // 설명도 복사
+        linkedApi.setApiType(ApiType.LINK);
+        linkedApi.setOriginApi(originApi); // 원본 API 참조 설정
+        linkedApi.setIsActive(originApi.getIsActive()); // 원본의 활성 상태를 따라감
+        linkedApi.setAiPlusActive(originApi.getAiPlusActive());
+
+        CustomApi savedLinkedApi = customApiRepository.save(linkedApi);
+
+        log.info("User {} successfully imported API {} as new API {}", importerUserId, originApiId, savedLinkedApi.getCustomApiId());
+        return convertToResponse(savedLinkedApi);
+    }
+
+    @Override
+    @Transactional
+    public void handlePlanDowngrade(String userId, String newPlan) {
+        log.info("플랜 다운그레이드 처리 시작 - userId: {}, newPlan: {}", userId, newPlan);
+        
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("user_id", userId);
+        additionalFields.put("new_plan", newPlan);
+        
+        try {
+            // 새로운 플랜별 최대 개수 결정
+            int maxAllowedApis = getMaxApiCountByPlan(newPlan);
+            additionalFields.put("max_allowed_apis", maxAllowedApis);
+            
+            structuredLogger.logBusinessEvent("PLAN_DOWNGRADE_PROCESSING_START", 
+                "Starting plan downgrade processing for user", additionalFields);
+            
+            // 사용자의 모든 커스텀 API를 생성일시 오름차순으로 조회 (오래된 순)
+            List<CustomApi> userApis = customApiRepository.findByUserIdAndDeletedFalseOrderByCreatedAtAsc(userId);
+            int totalApis = userApis.size();
+            
+            additionalFields.put("total_apis", totalApis);
+            
+            if (totalApis <= maxAllowedApis) {
+                log.info("기존 API 개수가 플랜 제한에 맞음 - userId: {}, totalApis: {}, maxAllowed: {}", 
+                    userId, totalApis, maxAllowedApis);
+                
+                // 모든 API를 활성화 (혹시 비활성화된 것이 있을 수 있음)
+                if (totalApis > 0) {
+                    List<String> allApiIds = userApis.stream()
+                        .map(CustomApi::getCustomApiId)
+                        .collect(Collectors.toList());
+                    
+                    int activatedCount = customApiRepository.updateActiveStatusByCustomApiIds(allApiIds, true);
+                    additionalFields.put("activated_count", activatedCount);
+                    
+                    structuredLogger.logBusinessEvent("PLAN_DOWNGRADE_ALL_ACTIVATED", 
+                        "All APIs activated as total count is within limit", additionalFields);
+                }
+                
+                structuredLogger.logBusinessEvent("PLAN_DOWNGRADE_PROCESSING_COMPLETED", 
+                    "Successfully processed plan downgrade for user", additionalFields);
+                return;
+            }
+            
+            // 제한 초과: 오래된 API부터 maxAllowedApis 개만 활성화, 나머지는 비활성화
+            List<CustomApi> apisToActivate = userApis.subList(0, maxAllowedApis);
+            List<CustomApi> apisToDeactivate = userApis.subList(maxAllowedApis, totalApis);
+            
+            int apisToActivateCount = apisToActivate.size();
+            int apisToDeactivateCount = apisToDeactivate.size();
+            
+            additionalFields.put("apis_to_activate_count", apisToActivateCount);
+            additionalFields.put("apis_to_deactivate_count", apisToDeactivateCount);
+            
+            log.info("플랜 제한 초과로 인한 API 상태 변경 - userId: {}, 활성화: {}개, 비활성화: {}개", 
+                userId, apisToActivateCount, apisToDeactivateCount);
+            
+            // 활성화할 API들 (오래된 API부터 maxAllowedApis 개)
+            if (apisToActivateCount > 0) {
+                List<String> activateApiIds = apisToActivate.stream()
+                    .map(CustomApi::getCustomApiId)
+                    .collect(Collectors.toList());
+                
+                int activatedCount = customApiRepository.updateActiveStatusByCustomApiIds(activateApiIds, true);
+                additionalFields.put("actually_activated_count", activatedCount);
+                
+                log.info("{}개의 API가 활성화되었습니다.", activatedCount);
+            }
+            
+            // 비활성화할 API들 (나머지 최신 API들)
+            if (apisToDeactivateCount > 0) {
+                List<String> deactivateApiIds = apisToDeactivate.stream()
+                    .map(CustomApi::getCustomApiId)
+                    .collect(Collectors.toList());
+                
+                int deactivatedCount = customApiRepository.updateActiveStatusByCustomApiIds(deactivateApiIds, false);
+                additionalFields.put("actually_deactivated_count", deactivatedCount);
+                
+                log.info("{}개의 API가 비활성화되었습니다.", deactivatedCount);
+            }
+            
+            structuredLogger.logBusinessEvent("PLAN_DOWNGRADE_PROCESSING_COMPLETED", 
+                "Successfully processed plan downgrade for user", additionalFields);
+            
+            log.info("플랜 다운그레이드 처리 완료 - userId: {}, newPlan: {}", userId, newPlan);
+            
+        } catch (Exception e) {
+            structuredLogger.logError("PLAN_DOWNGRADE_PROCESSING_FAILED", 
+                "Failed to process plan downgrade for user", e, additionalFields);
+            
+            log.error("플랜 다운그레이드 처리 실패 - userId: {}, newPlan: {}", userId, newPlan, e);
+            throw new RuntimeException("플랜 다운그래이드 처리 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void handlePlanUpgrade(String userId, String newPlan) {
+        log.info("플랜 업그레이드 처리 시작 - userId: {}, newPlan: {}", userId, newPlan);
+        
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("user_id", userId);
+        additionalFields.put("new_plan", newPlan);
+        
+        try {
+            // 새로운 플랜별 최대 개수 결정
+            int maxAllowedApis = getMaxApiCountByPlan(newPlan);
+            additionalFields.put("max_allowed_apis", maxAllowedApis);
+            
+            structuredLogger.logBusinessEvent("PLAN_UPGRADE_PROCESSING_START", 
+                "Starting plan upgrade processing for user", additionalFields);
+            
+            // 사용자의 모든 커스텀 API를 생성일시 오름차순으로 조회 (오래된 순)
+            List<CustomApi> allUserApis = customApiRepository.findByUserIdAndDeletedFalseOrderByCreatedAtAsc(userId);
+            int totalApis = allUserApis.size();
+            
+            additionalFields.put("total_apis", totalApis);
+            
+            if (totalApis == 0) {
+                log.info("사용자에게 커스텀 API가 없음 - userId: {}", userId);
+                structuredLogger.logBusinessEvent("PLAN_UPGRADE_NO_APIS", 
+                    "No custom APIs found for user", additionalFields);
+                return;
+            }
+            
+            if (totalApis <= maxAllowedApis) {
+                // 모든 API를 활성화 (비활성화된 것이 있을 수 있음)
+                List<String> allApiIds = allUserApis.stream()
+                    .map(CustomApi::getCustomApiId)
+                    .collect(Collectors.toList());
+                
+                int activatedCount = customApiRepository.updateActiveStatusByCustomApiIds(allApiIds, true);
+                additionalFields.put("activated_count", activatedCount);
+                
+                log.info("모든 API 활성화 완료 - userId: {}, totalApis: {}, activatedCount: {}", 
+                    userId, totalApis, activatedCount);
+                
+                structuredLogger.logBusinessEvent("PLAN_UPGRADE_ALL_ACTIVATED", 
+                    "All APIs activated as total count is within new plan limit", additionalFields);
+            } else {
+                // 새로운 플랜 제한까지만 활성화 (오래된 API부터)
+                List<CustomApi> apisToActivate = allUserApis.subList(0, maxAllowedApis);
+                List<String> activateApiIds = apisToActivate.stream()
+                    .map(CustomApi::getCustomApiId)
+                    .collect(Collectors.toList());
+                
+                int activatedCount = customApiRepository.updateActiveStatusByCustomApiIds(activateApiIds, true);
+                additionalFields.put("activated_count", activatedCount);
+                additionalFields.put("apis_to_activate_count", maxAllowedApis);
+                
+                log.info("제한 개수만큼 API 활성화 완료 - userId: {}, maxAllowed: {}, activatedCount: {}", 
+                    userId, maxAllowedApis, activatedCount);
+                
+                structuredLogger.logBusinessEvent("PLAN_UPGRADE_LIMITED_ACTIVATION", 
+                    "Activated APIs up to new plan limit", additionalFields);
+            }
+            
+            structuredLogger.logBusinessEvent("PLAN_UPGRADE_PROCESSING_COMPLETED", 
+                "Successfully processed plan upgrade for user", additionalFields);
+            
+            log.info("플랜 업그레이드 처리 완료 - userId: {}, newPlan: {}", userId, newPlan);
+            
+        } catch (Exception e) {
+            structuredLogger.logError("PLAN_UPGRADE_PROCESSING_FAILED", 
+                "Failed to process plan upgrade for user", e, additionalFields);
+            
+            log.error("플랜 업그레이드 처리 실패 - userId: {}, newPlan: {}", userId, newPlan, e);
+            throw new RuntimeException("플랜 업그레이드 처리 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 플랜별 최대 커스텀 API 개수 반환
+     * 
+     * @param plan 구독 플랜 (FREE, PRO)
+     * @return 최대 개수
+     */
+    private int getMaxApiCountByPlan(String plan) {
+        if (plan == null) {
+            return 3; // 기본값 (FREE)
+        }
+        
+        switch (plan.toUpperCase()) {
+            case "PRO":
+                return 5;
+            case "FREE":
+            default:
+                return 3;
+        }
+    }
+
     //엔티티 -> DTO 변환 메소드
-    private CustomApiResponseDto convertToResponse(CustomApi customApi) { // TODO: 외부 API 정보도 함께 반환해야 함
+    private CustomApiResponseDto convertToResponse(CustomApi customApi) {
+        String originApiId = null;
+        String ownerUserId = null;
+
+        // LINK 타입인 경우, 원본 API에서 추가 정보를 가져옵니다.
+        if (customApi.getApiType() == ApiType.LINK && customApi.getOriginApi() != null) {
+            CustomApi origin = customApi.getOriginApi();
+            originApiId = origin.getCustomApiId();
+            ownerUserId = origin.getUserId(); // 원본의 소유자
+        } else {
+            // ORIGINAL 타입인 경우, 자기 자신이 소유자입니다.
+            ownerUserId = customApi.getUserId();
+        }
+
+        // getExternalApiUrlList()는 엔티티 내부에서 LINK/ORIGINAL 타입을 이미 처리합니다.
         return new CustomApiResponseDto(
                 customApi.getCustomApiId(),
                 customApi.getUserId(),
                 customApi.getName(),
                 customApi.getDescription(),
                 customApi.getExternalApiUrlList(),
+                customApi.getAiPlusActive(),
                 customApi.getCreatedAt(),
-                customApi.getUpdatedAt()
+                customApi.getUpdatedAt(),
+                customApi.getApiType(),
+                customApi.isPublic(),
+                originApiId,
+                ownerUserId
         );
     }
 }
