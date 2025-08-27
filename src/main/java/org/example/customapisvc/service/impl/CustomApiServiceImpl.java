@@ -58,6 +58,13 @@ public class CustomApiServiceImpl implements CustomApiService {
             CustomApi customApi = customApiRepository.findByCustomApiIdAndDeletedFalse(customApiId)
                     .orElseThrow(() -> new RuntimeException("커스텀API를 찾을 수 없습니다. customApiId: " + customApiId));
             
+            // 커스텀 API가 비활성화되어 있는지 확인
+            if (!customApi.getIsActive()) {
+                structuredLogger.logBusinessEvent("CUSTOM_API_DISABLED_ACCESS_ATTEMPT", 
+                    "Attempt to access disabled custom API", additionalFields);
+                throw new RuntimeException("의존되는 외부 API의 영향으로 이 커스텀 API는 사용할 수 없습니다. customApiId: " + customApiId);
+            }
+            
             structuredLogger.logBusinessEvent("CUSTOM_API_RETRIEVED", 
                 "Successfully retrieved custom API by ID", additionalFields);
             

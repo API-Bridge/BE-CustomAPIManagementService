@@ -34,12 +34,13 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
     int softDeleteAllByUserId(@Param("userId") String userId);
 
     /**
-     * 특정 사용자의 삭제되지 않은 커스텀 API 개수 조회
+     * 특정 사용자의 삭제되지 않고 활성화된 커스텀 API 개수 조회
+     * 플랜별 생성 제한 검증 시 사용 (isActive=false인 API는 제외)
      * 
      * @param userId 조회할 사용자 ID
      * @return 해당 사용자의 활성 커스텀 API 개수
      */
-    @Query("SELECT COUNT(ca) FROM CustomApi ca WHERE ca.userId = :userId AND ca.deleted = false")
+    @Query("SELECT COUNT(ca) FROM CustomApi ca WHERE ca.userId = :userId AND ca.deleted = false AND ca.isActive = true")
     long countActiveCustomApisByUserId(@Param("userId") String userId);
 
     /**

@@ -24,7 +24,7 @@ public class CustomApiController {
     private final CustomApiService customApiService;
     private final AiCustomApiGenerationService aiCustomApiGenerationService;
 
-    @Operation(summary = "사용자의 커스텀 API 목록 조회", description = "특정 사용자가 생성한 모든 커스텀 API를 조회합니다.") //TODO: 사용자의 플랜 기반으로 갯수 제한 로직 추가
+    @Operation(summary = "사용자의 커스텀 API 목록 조회", description = "특정 사용자가 생성한 모든 커스텀 API를 조회합니다.")
     @GetMapping
     public BaseResponse<List<CustomApiResponseDto>> getCustomApisByUserId(
             @Parameter(description = "사용자 ID", required = true, example = "user-123")
@@ -34,6 +34,7 @@ public class CustomApiController {
         return BaseResponse.success(customApis, "커스텀 API 목록을 성공적으로 조회했습니다.");
     }
 
+    @Operation(summary = "커스텀API 를 ID로 검색", description = "사용자가 커스텀API 사용할때, AI서비스가 요청하는 엔드포인트")
     @GetMapping("/{customApiId}")
     public BaseResponse<CustomApiResponseDto> getCustomApiById(
             @Parameter(description = "커스텀 API ID", required = true, example = "api-001")

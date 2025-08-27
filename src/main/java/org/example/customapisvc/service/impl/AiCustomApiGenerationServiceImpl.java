@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.example.customapisvc.domain.Entity.CustomApi;
 import org.example.customapisvc.dto.ExternalApiInfoDto;
@@ -44,6 +45,7 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
     private final ObjectMapper objectMapper;
     private final EventPublisherService eventPublisherService;
 
+
     @Override
     @Transactional
     public CustomApiResponseDto generateCustomApiWithAi(InitiateCreationRequestDto request) {
@@ -55,6 +57,19 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
             UserInfoResponseDto userInfo = userService.getUserInfo(request.getUserId());
             String userPlan = userInfo.getPlan();
             log.info("사용자 플랜 조회 완료 - userId: {}, plan: {}", request.getUserId(), userPlan);
+            
+            // 0.5단계: 플랜별 커스텀 API 생성 개수 제한 검증
+            int maxAllowed = "PRO".equalsIgnoreCase(userPlan) ? 5 : 3;
+            long currentCount = customApiRepository.countActiveCustomApisByUserId(request.getUserId());
+            if (currentCount >= maxAllowed) {
+                String errorMessage = String.format("플랜 제한을 초과했습니다. %s 플랜은 최대 %d개의 커스텀 API만 생성할 수 있습니다. (현재: %d개)", 
+                        userPlan, maxAllowed, currentCount);
+                log.warn("커스텀 API 생성 제한 초과 - userId: {}, plan: {}, current: {}, max: {}", 
+                        request.getUserId(), userPlan, currentCount, maxAllowed);
+                throw new RuntimeException(errorMessage);
+            }
+            log.info("커스텀 API 생성 제한 검증 통과 - userId: {}, current: {}, max: {}", 
+                    request.getUserId(), currentCount, maxAllowed);
             // 1단계: 외부API서비스에서 도메인/키워드에 해당하는 외부 API 리스트 조회
             ExternalApiRequestDto externalApiRequest = new ExternalApiRequestDto(request.getDomains(), request.getKeywords());
             ExternalApiResponseDto externalApiResponse = externalApiService.getExternalApiList(externalApiRequest);
