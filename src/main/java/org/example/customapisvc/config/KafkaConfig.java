@@ -83,6 +83,8 @@ public class KafkaConfig {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        props.put(JsonDeserializer.TYPE_MAPPINGS, 
+            "org.example.APIManagementSvc.event.model.ExternalApiDeletedEvent:org.example.customapisvc.event.model.FlatExternalApiDeletedEvent");
         return new DefaultKafkaConsumerFactory<>(props);
     }
 

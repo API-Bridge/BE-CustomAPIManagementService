@@ -2,6 +2,7 @@ package org.example.customapisvc.service;
 
 import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
+import org.example.customapisvc.dto.response.CustomApiDetailResponseDto;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,6 +15,9 @@ public interface CustomApiService {
 
     //커스텀 API 단건 조회
     CustomApiResponseDto getCustomApiById(String customApiId);
+    
+    //커스텀 API 상세 조회 (외부 마이크로서비스용)
+    CustomApiDetailResponseDto getCustomApiDetailById(String customApiId);
 
     //커스텀 API 이름으로 검색
     List<CustomApiResponseDto> searchCustomApisByName(String userId, String name);

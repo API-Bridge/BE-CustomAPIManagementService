@@ -3,6 +3,7 @@ package org.example.customapisvc.event.listener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.customapisvc.event.model.ExternalApiDeletedEvent;
+import org.example.customapisvc.event.model.FlatExternalApiDeletedEvent;
 import org.example.customapisvc.service.CustomApiService;
 import org.example.customapisvc.util.StructuredLogger;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -36,7 +37,7 @@ public class ExternalApiEventListener {
 
     /**
      * 외부 API 삭제 이벤트 리스너
-     * api-usage-logs 토픽에서 EXTERNAL_API_DELETED 이벤트를 수신하여 처리
+     * external_api_events 토픽에서 EXTERNAL_API_DELETED 이벤트를 수신하여 처리
      * 
      * @param externalApiDeletedEvent 외부 API 삭제 이벤트 객체
      * @param partition Kafka 파티션 정보
@@ -44,38 +45,38 @@ public class ExternalApiEventListener {
      * @param acknowledgment 수동 커밋을 위한 Acknowledgment
      */
     @KafkaListener(
-            topics = "api-usage-logs",
+            topics = "external_api_events",
             groupId = "custom-api-service-group",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void handleExternalApiDeletedEvent(
-            @Payload ExternalApiDeletedEvent externalApiDeletedEvent,
+            @Payload FlatExternalApiDeletedEvent flatEvent,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
             Acknowledgment acknowledgment) {
         
-        log.info("외부 API 삭제 이벤트 수신 - eventId: {}, externalApiId: {}, externalApiName: {}, partition: {}, offset: {}", 
-                externalApiDeletedEvent.getEventId(), externalApiDeletedEvent.getPayload().getExternalApiId(), 
-                externalApiDeletedEvent.getPayload().getExternalApiName(), partition, offset);
+        log.info("외부 API 삭제 이벤트 수신 - eventId: {}, apiId: {}, apiName: {}, partition: {}, offset: {}", 
+                flatEvent.getEventId(), flatEvent.getApiId(), flatEvent.getApiName(), partition, offset);
         
         Map<String, Object> additionalFields = new HashMap<>();
-        additionalFields.put("event_id", externalApiDeletedEvent.getEventId());
-        additionalFields.put("trace_id", externalApiDeletedEvent.getTraceId());
-        additionalFields.put("external_api_id", externalApiDeletedEvent.getPayload().getExternalApiId());
-        additionalFields.put("external_api_name", externalApiDeletedEvent.getPayload().getExternalApiName());
-        additionalFields.put("external_api_url", externalApiDeletedEvent.getPayload().getExternalApiUrl());
-        additionalFields.put("event_type", externalApiDeletedEvent.getEventType());
-        additionalFields.put("service_name", externalApiDeletedEvent.getServiceName());
+        additionalFields.put("event_id", flatEvent.getEventId());
+        additionalFields.put("correlation_id", flatEvent.getCorrelationId());
+        additionalFields.put("external_api_id", flatEvent.getApiId());
+        additionalFields.put("external_api_name", flatEvent.getApiName());
+        additionalFields.put("external_api_url", flatEvent.getApiUrl());
+        additionalFields.put("event_type", flatEvent.getEventType());
+        additionalFields.put("source_service", flatEvent.getSourceService());
+        additionalFields.put("deleted_by", flatEvent.getDeletedBy());
         additionalFields.put("partition", partition);
         additionalFields.put("offset", offset);
-        additionalFields.put("deletion_reason", externalApiDeletedEvent.getPayload().getDeletionReason());
+        additionalFields.put("deletion_reason", flatEvent.getDeletionReason());
         
         try {
             structuredLogger.logBusinessEvent("EXTERNAL_API_DELETED_EVENT_RECEIVED", 
                 "Received external API deletion event from Kafka", additionalFields);
             
             // 외부 API ID 유효성 검증
-            String externalApiId = externalApiDeletedEvent.getPayload().getExternalApiId();
+            String externalApiId = flatEvent.getApiId();
             if (externalApiId == null || externalApiId.trim().isEmpty()) {
                 structuredLogger.logError("INVALID_EXTERNAL_API_DELETED_EVENT", 
                     "External API ID is null or empty in external API deletion event", new IllegalArgumentException("Invalid externalApiId"), additionalFields);
@@ -102,7 +103,7 @@ public class ExternalApiEventListener {
                 "Failed to process external API deletion event", e, additionalFields);
             
             log.error("외부 API 삭제 이벤트 처리 중 오류 발생 - eventId: {}, externalApiId: {}", 
-                    externalApiDeletedEvent.getEventId(), externalApiDeletedEvent.getPayload().getExternalApiId(), e);
+                    flatEvent.getEventId(), flatEvent.getApiId(), e);
             
             // 에러 발생 시에도 메시지를 확인하여 재처리 방지
             // 실제 운영환경에서는 DLQ(Dead Letter Queue) 설정을 고려해야 함

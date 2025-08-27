@@ -1,5 +1,6 @@
 package org.example.customapisvc.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -15,12 +16,20 @@ public class ExternalApiInfoDto {
     
     private String apiId;
     private String apiName;
+    private String endpoint;
     private List<ApiParameter> parameters;
     private String reason;
 
     public ExternalApiInfoDto(String apiId, String apiName, List<ApiParameter> parameters) {
         this.apiId = apiId;
         this.apiName = apiName;
+        this.parameters = parameters;
+    }
+
+    public ExternalApiInfoDto(String apiId, String apiName, String endpoint, List<ApiParameter> parameters) {
+        this.apiId = apiId;
+        this.apiName = apiName;
+        this.endpoint = endpoint;
         this.parameters = parameters;
     }
 
@@ -32,6 +41,7 @@ public class ExternalApiInfoDto {
         private String parameterId;
         private String paramName;
         private String paramType;
+        @JsonProperty("necessary")
         private boolean isRequired;
         private String paramDescription;
         private String defaultValue;

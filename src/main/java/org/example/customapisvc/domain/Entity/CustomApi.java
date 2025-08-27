@@ -108,13 +108,52 @@ public class CustomApi extends BaseEntity {
             // Json 에서 역직렬화 (역직렬화: JSON을 객체로 변환하는 과정)
             try {
                 ObjectMapper mapper = new ObjectMapper();
-                this.externalApiUrlList = mapper.readValue(externalApiUrlListJson, 
-                    new TypeReference<List<ExternalApiInfoDto>>() {});
+                
+                // 먼저 새로운 구조로 시도
+                try {
+                    this.externalApiUrlList = mapper.readValue(externalApiUrlListJson, 
+                        new TypeReference<List<ExternalApiInfoDto>>() {});
+                } catch (JsonProcessingException ex) {
+                    // 실패하면 기존 구조(name, endpoint)로 파싱 후 변환
+                    List<LegacyApiInfo> legacyList = mapper.readValue(externalApiUrlListJson, 
+                        new TypeReference<List<LegacyApiInfo>>() {});
+                    
+                    this.externalApiUrlList = legacyList.stream()
+                        .map(legacy -> new ExternalApiInfoDto(
+                            legacy.getName(), // apiId로 name 사용
+                            legacy.getName(), // apiName으로 name 사용
+                            legacy.getEndpoint(), // endpoint 추가
+                            new ArrayList<>() // 빈 파라미터 리스트
+                        ))
+                        .collect(java.util.stream.Collectors.toList());
+                }
             } catch (JsonProcessingException e) {
                 this.externalApiUrlList = new ArrayList<>();
             }
         }
         return externalApiUrlList != null ? externalApiUrlList : new ArrayList<>();
+    }
+
+    // 기존 JSON 구조를 위한 임시 클래스
+    private static class LegacyApiInfo {
+        private String name;
+        private String endpoint;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getEndpoint() {
+            return endpoint;
+        }
+
+        public void setEndpoint(String endpoint) {
+            this.endpoint = endpoint;
+        }
     }
 
 }

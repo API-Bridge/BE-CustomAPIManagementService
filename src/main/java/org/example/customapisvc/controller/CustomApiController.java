@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.customapisvc.dto.common.BaseResponse;
 import org.example.customapisvc.dto.request.InitiateCreationRequestDto;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
+import org.example.customapisvc.dto.response.CustomApiDetailResponseDto;
 import org.example.customapisvc.service.AiCustomApiGenerationService;
 import org.example.customapisvc.service.CustomApiService;
 import org.springframework.http.HttpStatus;
@@ -36,11 +37,11 @@ public class CustomApiController {
 
     @Operation(summary = "커스텀API 를 ID로 검색", description = "사용자가 커스텀API 사용할때, AI서비스가 요청하는 엔드포인트")
     @GetMapping("/{customApiId}")
-    public BaseResponse<CustomApiResponseDto> getCustomApiById(
+    public BaseResponse<CustomApiDetailResponseDto> getCustomApiById(
             @Parameter(description = "커스텀 API ID", required = true, example = "api-001")
             @PathVariable String customApiId) {
         
-        CustomApiResponseDto customApi = customApiService.getCustomApiById(customApiId);
+        CustomApiDetailResponseDto customApi = customApiService.getCustomApiDetailById(customApiId);
         return BaseResponse.success(customApi, "커스텀 API를 성공적으로 조회했습니다.");
     }
 
@@ -56,7 +57,7 @@ public class CustomApiController {
         return BaseResponse.success(customApis, "커스텀 API 검색을 성공적으로 완료했습니다.");
     }
 
-    @Operation(summary = "AI 기반 커스텀 API 생성", description = "AI를 활용하여 자동으로 커스텀 API를 생성합니다.")
+    @Operation(summary = "AI 기반 커스텀 API 생성", description = "AI서비스에서 커스텀API 생성시 사용하는 컨트롤러")
     @PostMapping("/ai-generate")
     @ResponseStatus(HttpStatus.CREATED)
     public BaseResponse<CustomApiResponseDto> generateCustomApiWithAi(

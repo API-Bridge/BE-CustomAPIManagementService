@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.customapisvc.domain.Entity.ApiType;
 import org.example.customapisvc.domain.Entity.CustomApi;
 import org.example.customapisvc.dto.response.CustomApiResponseDto;
+import org.example.customapisvc.dto.response.CustomApiDetailResponseDto;
 import org.example.customapisvc.event.model.CustomApiDeletedEvent;
 import org.example.customapisvc.event.publisher.EventPublisherService;
 import org.example.customapisvc.repository.CustomApiRepository;
@@ -82,6 +83,46 @@ public class CustomApiServiceImpl implements CustomApiService {
                 "Successfully retrieved custom API by ID", additionalFields);
             
             return convertToResponse(customApi);
+        } catch (RuntimeException e) {
+            structuredLogger.logError("CUSTOM_API_NOT_FOUND", 
+                "Custom API not found for ID: " + customApiId, e, additionalFields);
+            throw e;
+        }
+    }
+
+    @Override
+    public CustomApiDetailResponseDto getCustomApiDetailById(String customApiId) {
+        log.debug("ID로 커스텀API 상세 조회: {}", customApiId);
+        
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("custom_api_id", customApiId);
+        
+        try {
+            CustomApi customApi = customApiRepository.findByCustomApiIdAndDeletedFalse(customApiId)
+                    .orElseThrow(() -> new RuntimeException("커스텀API를 찾을 수 없습니다. customApiId: " + customApiId));
+            
+            // LINK 타입인 경우, 원본 API의 상태를 확인
+            if (customApi.getApiType() == ApiType.LINK) {
+                CustomApi originApi = customApi.getOriginApi();
+                if (originApi == null || originApi.isDeleted()) {
+                    throw new RuntimeException("원본 API가 삭제되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+                if (!originApi.getIsActive()) {
+                    throw new RuntimeException("원본 API가 비활성화되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+            }
+            
+            // 커스텀 API가 비활성화되어 있는지 확인
+            if (!customApi.getIsActive()) {
+                structuredLogger.logBusinessEvent("CUSTOM_API_DISABLED_ACCESS_ATTEMPT", 
+                    "Attempt to access disabled custom API", additionalFields);
+                throw new RuntimeException("의존되는 외부 API의 영향으로 이 커스텀 API는 사용할 수 없습니다. 새 커스텀API 를 생성해주세요. customApiId: " + customApiId);
+            }
+            
+            structuredLogger.logBusinessEvent("CUSTOM_API_DETAIL_RETRIEVED", 
+                "Successfully retrieved custom API detail by ID", additionalFields);
+            
+            return convertToDetailResponse(customApi);
         } catch (RuntimeException e) {
             structuredLogger.logError("CUSTOM_API_NOT_FOUND", 
                 "Custom API not found for ID: " + customApiId, e, additionalFields);
@@ -531,6 +572,39 @@ public class CustomApiServiceImpl implements CustomApiService {
                 originApiId,
                 ownerUserId,
                 customApi.getCallCount() // 일일 호출 횟수 추가
+        );
+    }
+
+    // AI서비스의 조회용 커스텀API상세 DTO 변환
+    private CustomApiDetailResponseDto convertToDetailResponse(CustomApi customApi) {
+        List<CustomApiDetailResponseDto.ExternalApiDetail> externalApiDetails = customApi.getExternalApiUrlList().stream()
+                .map(externalApi -> {
+                    List<CustomApiDetailResponseDto.ApiParameterDetail> parameterDetails = externalApi.getParameters().stream()
+                            .map(param -> new CustomApiDetailResponseDto.ApiParameterDetail(
+                                    param.getParamName(),
+                                    param.getParamType(),
+                                    param.getParamDescription(),
+                                    param.isRequired()
+                            ))
+                            .collect(Collectors.toList());
+                    
+                    return new CustomApiDetailResponseDto.ExternalApiDetail(
+                            externalApi.getApiId(),
+                            externalApi.getApiName(),
+                            externalApi.getEndpoint(),
+                            parameterDetails
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return new CustomApiDetailResponseDto(
+                customApi.getCustomApiId(),
+                customApi.getUserId(),
+                customApi.getName(),
+                customApi.getDescription(),
+                externalApiDetails,
+                customApi.getCreatedAt(),
+                customApi.getUpdatedAt()
         );
     }
 }

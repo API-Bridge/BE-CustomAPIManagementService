@@ -156,6 +156,7 @@ public class ExternalApiServiceImpl implements ExternalApiService {
         return new ExternalApiInfoDto(
             apiSpec.getApiId(),
             apiSpec.getApiName(),
+            apiSpec.getApiUrl(),
             convertedParams
         );
     }

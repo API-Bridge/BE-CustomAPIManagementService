@@ -15,6 +15,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<BaseResponse<Void>> handleRuntimeException(RuntimeException e) {
+        // 디버깅을 위해 실제 예외 정보 로깅
+        System.err.println("RuntimeException occurred: " + e.getMessage());
+        e.printStackTrace();
+        
         String message = e.getMessage();
         
         // 메시지 기반으로 적절한 HTTP 상태 코드 결정

@@ -271,11 +271,14 @@ public class AiCustomApiGenerationServiceImpl implements AiCustomApiGenerationSe
                 selectedApi.setApiName(apiName);
                 selectedApi.setReason(reason);
                 
-                // 원본 API에서 parameters 정보를 복사 (AI가 parameters를 생성하지 않으므로)
+                // 원본 API에서 parameters와 endpoint 정보를 복사 (AI가 parameters를 생성하지 않으므로)
                 allExternalApis.stream()
                     .filter(api -> api.getApiId().equals(apiId))
                     .findFirst()
-                    .ifPresent(originalApi -> selectedApi.setParameters(originalApi.getParameters()));
+                    .ifPresent(originalApi -> {
+                        selectedApi.setParameters(originalApi.getParameters());
+                        selectedApi.setEndpoint(originalApi.getEndpoint());
+                    });
                 
                 selectedExternalApis.add(selectedApi);
             }

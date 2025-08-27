@@ -1,5 +1,6 @@
 package org.example.customapisvc.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,6 +30,7 @@ public class CustomApiResponseDto {
     private String description;
 
     @Schema(description = "외부API 이름 및 호출구조", example = "[{'api_name':'날씨 조회 API'}]")
+    @JsonProperty("externalApiUrl_list")
     private List<ExternalApiInfoDto> externalApiUrl_list;
 
     @Schema(description = "AI Plus 활성화 여부", example = "false")
