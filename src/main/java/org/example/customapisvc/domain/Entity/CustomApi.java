@@ -123,6 +123,7 @@ public class CustomApi extends BaseEntity {
                             legacy.getName(), // apiId로 name 사용
                             legacy.getName(), // apiName으로 name 사용
                             legacy.getEndpoint(), // endpoint 추가
+                            "GET", // 기본값으로 GET 설정 (legacy 데이터에는 HTTP 메소드 정보가 없음)
                             new ArrayList<>() // 빈 파라미터 리스트
                         ))
                         .collect(java.util.stream.Collectors.toList());

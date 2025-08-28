@@ -592,6 +592,7 @@ public class CustomApiServiceImpl implements CustomApiService {
                             externalApi.getApiId(),
                             externalApi.getApiName(),
                             externalApi.getEndpoint(),
+                            externalApi.getHttpMethod(),
                             parameterDetails
                     );
                 })

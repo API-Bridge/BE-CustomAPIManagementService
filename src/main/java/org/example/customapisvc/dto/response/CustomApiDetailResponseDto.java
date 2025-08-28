@@ -53,6 +53,14 @@ public class CustomApiDetailResponseDto {
         @Schema(description = "API 엔드포인트 URL", example = "https://api.coingecko.com/api/v3/simple/price")
         private String endpoint;
 
+        @Schema(description = "HTTP 메소드", example = "GET")
+        private String httpMethod;
+        
+        // httpMethod getter with default value
+        public String getHttpMethod() {
+            return httpMethod != null ? httpMethod : "GET";
+        }
+
         @Schema(description = "파라미터 목록")
         private List<ApiParameterDetail> parameters;
     }
@@ -67,7 +75,7 @@ public class CustomApiDetailResponseDto {
         @Schema(description = "파라미터 이름", example = "coins")
         private String paramName;
 
-        @Schema(description = "파라미터 타입", example = "INPUT")
+        @Schema(description = "파라미터 데이터 타입", example = "String")
         private String paramType;
 
         @Schema(description = "파라미터 설명", example = "조회할 코인 목록 (bitcoin,ethereum)")

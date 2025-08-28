@@ -157,6 +157,7 @@ public class ExternalApiServiceImpl implements ExternalApiService {
             apiSpec.getApiId(),
             apiSpec.getApiName(),
             apiSpec.getApiUrl(),
+            apiSpec.getHttpMethod(),
             convertedParams
         );
     }

@@ -12,6 +12,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
@@ -80,11 +81,25 @@ public class KafkaConfig {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        
+        // ErrorHandlingDeserializer로 감싸서 역직렬화 오류 처리
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        
+        // 실제 역직렬화 클래스 지정
+        props.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
+        props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
+        
+        // JsonDeserializer 설정
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         props.put(JsonDeserializer.TYPE_MAPPINGS, 
-            "org.example.APIManagementSvc.event.model.ExternalApiDeletedEvent:org.example.customapisvc.event.model.FlatExternalApiDeletedEvent");
+            "org.example.APIManagementSvc.event.model.ExternalApiDeletedEvent:org.example.customapisvc.event.model.FlatExternalApiDeletedEvent," +
+            "org.example.AIsvc.event.model.CustomApiCalledEvent:org.example.customapisvc.event.model.CustomApiCalledEvent," +
+            "CustomApiCalled:org.example.customapisvc.event.model.CustomApiCalledEvent");
+            
+        // 역직렬화 실패 시 기본 타입 지정
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "org.example.customapisvc.event.model.CustomApiCalledEvent");
+        
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
