@@ -28,8 +28,8 @@ public class CustomApiController {
     @Operation(summary = "사용자의 커스텀 API 목록 조회", description = "특정 사용자가 생성한 모든 커스텀 API를 조회합니다.")
     @GetMapping
     public BaseResponse<List<CustomApiResponseDto>> getCustomApisByUserId(
-            @Parameter(description = "사용자 ID", required = true, example = "user-123")
-            @RequestParam String userId) {
+            @Parameter(description = "사용자 ID", required = true, example = "auth0|64abc123...")
+            @RequestHeader("X-User-Id") String userId) {
         
         List<CustomApiResponseDto> customApis = customApiService.getCustomApisByUserId(userId);
         return BaseResponse.success(customApis, "커스텀 API 목록을 성공적으로 조회했습니다.");
@@ -45,16 +45,14 @@ public class CustomApiController {
         return BaseResponse.success(customApi, "커스텀 API를 성공적으로 조회했습니다.");
     }
 
-    @Operation(summary = "커스텀 API 이름 검색", description = "사용자의 커스텀 API를 이름으로 검색합니다.")
+    @Operation(summary = "공유된 커스텀 API 이름 검색", description = "모든 사용자가 공유한 커스텀 API를 이름으로 검색합니다.")
     @GetMapping("/search")
     public BaseResponse<List<CustomApiResponseDto>> searchCustomApisByName(
-            @Parameter(description = "사용자 ID", required = true, example = "user-123")
-            @RequestParam String userId,
             @Parameter(description = "검색할 이름 (부분 일치)", required = true, example = "날씨")
             @RequestParam String name) {
         
-        List<CustomApiResponseDto> customApis = customApiService.searchCustomApisByName(userId, name);
-        return BaseResponse.success(customApis, "커스텀 API 검색을 성공적으로 완료했습니다.");
+        List<CustomApiResponseDto> customApis = customApiService.searchCustomApisByName(name);
+        return BaseResponse.success(customApis, "공유된 커스텀 API 검색을 성공적으로 완료했습니다.");
     }
 
     @Operation(summary = "AI 기반 커스텀 API 생성", description = "AI서비스에서 커스텀API 생성시 사용하는 컨트롤러")
@@ -79,8 +77,8 @@ public class CustomApiController {
     public BaseResponse<Void> deleteCustomApi(
             @Parameter(description = "커스텀 API ID", required = true, example = "api-001")
             @PathVariable String customApiId,
-            @Parameter(description = "사용자 ID", required = true, example = "user-123")
-            @RequestParam String userId) {
+            @Parameter(description = "사용자 ID", required = true, example = "auth0|64abc123...")
+            @RequestHeader("X-User-Id") String userId) {
         
         customApiService.deleteCustomApi(customApiId, userId);
         return BaseResponse.success(null, "커스텀 API가 성공적으로 삭제되었습니다.");
@@ -91,8 +89,8 @@ public class CustomApiController {
     public BaseResponse<Void> shareCustomApi(
             @Parameter(description = "커스텀 API ID", required = true, example = "api-001")
             @PathVariable String customApiId,
-            @Parameter(description = "사용자 ID", required = true, example = "user-123")
-            @RequestParam String userId,
+            @Parameter(description = "사용자 ID", required = true, example = "auth0|64abc123...")
+            @RequestHeader("X-User-Id") String userId,
             @Parameter(description = "공유 설정 (true: 공유, false: 공유 취소)", required = true, example = "true")
             @RequestParam boolean share) {
         
@@ -104,19 +102,18 @@ public class CustomApiController {
     @Operation(summary = "공유된 커스텀 API 목록 조회", description = "모든 사용자에게 공유된 커스텀 API 목록을 조회합니다.")
     @GetMapping("/shared")
     public BaseResponse<List<CustomApiResponseDto>> getSharedApis() {
-        
         List<CustomApiResponseDto> sharedApis = customApiService.getSharedApis();
         return BaseResponse.success(sharedApis, "공유된 커스텀 API 목록을 성공적으로 조회했습니다.");
     }
 
-    @Operation(summary = "공유된 커스텀 API 가져오기", description = "공유된 커스텀 API를 현재 사용자의 대시보드로 가져옵니다.")
+    @Operation(summary = "공유된 커스텀 API 가져오기", description = "공유된 커스텀 API를 현재 사용자의 대시보드에 추가합니다.")
     @PostMapping("/{originApiId}/import")
     @ResponseStatus(HttpStatus.CREATED)
     public BaseResponse<CustomApiResponseDto> importSharedApi(
             @Parameter(description = "가져올 원본 API ID", required = true, example = "api-origin-001")
             @PathVariable String originApiId,
-            @Parameter(description = "API를 가져오는 사용자 ID", required = true, example = "user-456")
-            @RequestParam String importerUserId) {
+            @Parameter(description = "API를 가져오는 사용자 ID", required = true, example = "auth0|64abc123...")
+            @RequestHeader("X-User-Id") String importerUserId) {
         
         CustomApiResponseDto importedApi = customApiService.importSharedApi(originApiId, importerUserId);
         return BaseResponse.success(importedApi, "공유된 커스텀 API를 성공적으로 가져왔습니다.");

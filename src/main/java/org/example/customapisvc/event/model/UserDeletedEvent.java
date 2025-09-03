@@ -1,52 +1,63 @@
 package org.example.customapisvc.event.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.time.LocalDateTime;
 
 /**
  * 사용자 삭제 이벤트
- * 다른 마이크로서비스에서 사용자가 삭제되었을 때 발행되는 이벤트
- * 이 이벤트를 수신하여 해당 사용자의 모든 커스텀 API를 삭제 처리
+ * 
+ * 사용자가 시스템에서 삭제되었을 때 발행되는 이벤트입니다.
+ * 다른 마이크로서비스들이 이 이벤트를 구독하여 
+ * 사용자 삭제에 따른 정리 작업을 수행할 수 있습니다.
+ * 
+ * 이벤트 구독 서비스 예시:
+ * - 파일 서비스: 사용자 파일 삭제
+ * - 알림 서비스: 사용자 관련 알림 정리
+ * - 분석 서비스: 사용자 삭제 통계 업데이트
+ * - 권한 서비스: 사용자 권한 정리
+ * - 결제 서비스: 구독 및 결제 정보 정리
  */
-@Data
-@SuperBuilder
+@Getter
+@Builder
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@AllArgsConstructor
 public class UserDeletedEvent extends BaseEvent {
-
+    
     /**
-     * 사용자 삭제 이벤트 생성자 (삭제 사유 포함)
-     * 
-     * @param userId 삭제된 사용자 ID
-     * @param deletionReason 삭제 사유
+     * 삭제된 사용자의 고유 식별자
      */
-    public UserDeletedEvent(String userId, String deletionReason) {
-        super("UserDeleted");
-        this.payload = new UserDeletedPayload(userId, deletionReason);
-    }
+    private String userId;
+    
+    /**
+     * Auth0에서 제공하는 사용자 식별자
+     */
+    private String auth0Id;
+    
+    /**
+     * 사용자 이메일 주소
+     */
+    private String userEmail;
+    
+    /**
+     * 사용자 삭제 시간
+     */
+    private LocalDateTime deletedAt;
+    
+    /**
+     * 삭제 사유 (선택적)
+     */
+    private String deletionReason;
+    
 
-    /** 이벤트의 실제 내용을 담는 페이로드 */
-    private UserDeletedPayload payload;
 
     @Override
-    public UserDeletedPayload getPayload() {
-        return payload;
-    }
-
-    /**
-     * 사용자 삭제 이벤트의 페이로드
-     */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class UserDeletedPayload {
-        /** 삭제된 사용자의 ID */
-        private String userId;
-        
-        /** 사용자 삭제 사유 (선택사항) */
-        private String deletionReason;
+    public Object getPayload() {
+        return this;
     }
 }

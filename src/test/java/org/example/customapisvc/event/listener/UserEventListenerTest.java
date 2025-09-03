@@ -40,29 +40,31 @@ class UserEventListenerTest {
     
     @BeforeEach
     void setUp() {
-        userDeletedEvent = new UserDeletedEvent("test-user-123", "사용자 요청에 의한 탈퇴");
+        userDeletedEvent = new UserDeletedEvent("internal-user-123", "auth0|test-user-123", "test@example.com", 
+                java.time.LocalDateTime.now(), "사용자 요청에 의한 탈퇴");
     }
     
     @Test
     void handleUserDeletedEvent_shouldProcessSuccessfully() {
         // Given
         int deletedCount = 3;
-        when(customApiService.deleteAllCustomApisByUserId("test-user-123")).thenReturn(deletedCount);
+        when(customApiService.deleteAllCustomApisByUserId("auth0|test-user-123")).thenReturn(deletedCount);
         
         // When
         userEventListener.handleUserDeletedEvent(userDeletedEvent, 0, 100L, acknowledgment);
         
         // Then
-        verify(customApiService, times(1)).deleteAllCustomApisByUserId("test-user-123");
+        verify(customApiService, times(1)).deleteAllCustomApisByUserId("auth0|test-user-123");
         verify(structuredLogger, times(1)).logBusinessEvent(eq("USER_DELETED_EVENT_RECEIVED"), anyString(), any());
         verify(structuredLogger, times(1)).logBusinessEvent(eq("USER_DELETED_EVENT_PROCESSED"), anyString(), any());
         verify(acknowledgment, times(1)).acknowledge();
     }
     
     @Test
-    void handleUserDeletedEvent_shouldSkipWhenUserIdIsNull() {
+    void handleUserDeletedEvent_shouldSkipWhenAuth0IdIsNull() {
         // Given
-        UserDeletedEvent invalidEvent = new UserDeletedEvent(null, "테스트 삭제 사유");
+        UserDeletedEvent invalidEvent = new UserDeletedEvent("internal-user-123", null, "test@example.com", 
+                java.time.LocalDateTime.now(), "테스트 삭제 사유");
         
         // When
         userEventListener.handleUserDeletedEvent(invalidEvent, 0, 100L, acknowledgment);
@@ -74,9 +76,10 @@ class UserEventListenerTest {
     }
     
     @Test
-    void handleUserDeletedEvent_shouldSkipWhenUserIdIsBlank() {
+    void handleUserDeletedEvent_shouldSkipWhenAuth0IdIsBlank() {
         // Given
-        UserDeletedEvent invalidEvent = new UserDeletedEvent("   ", "테스트 삭제 사유");
+        UserDeletedEvent invalidEvent = new UserDeletedEvent("internal-user-123", "   ", "test@example.com", 
+                java.time.LocalDateTime.now(), "테스트 삭제 사유");
         
         // When
         userEventListener.handleUserDeletedEvent(invalidEvent, 0, 100L, acknowledgment);
@@ -91,13 +94,13 @@ class UserEventListenerTest {
     void handleUserDeletedEvent_shouldHandleServiceException() {
         // Given
         RuntimeException exception = new RuntimeException("Database connection failed");
-        when(customApiService.deleteAllCustomApisByUserId("test-user-123")).thenThrow(exception);
+        when(customApiService.deleteAllCustomApisByUserId("auth0|test-user-123")).thenThrow(exception);
         
         // When
         userEventListener.handleUserDeletedEvent(userDeletedEvent, 0, 100L, acknowledgment);
         
         // Then
-        verify(customApiService, times(1)).deleteAllCustomApisByUserId("test-user-123");
+        verify(customApiService, times(1)).deleteAllCustomApisByUserId("auth0|test-user-123");
         verify(structuredLogger, times(1)).logBusinessEvent(eq("USER_DELETED_EVENT_RECEIVED"), anyString(), any());
         verify(structuredLogger, times(1)).logError(eq("USER_DELETED_EVENT_PROCESSING_ERROR"), anyString(), eq(exception), any());
         verify(acknowledgment, times(1)).acknowledge(); // Acknowledge even on error to prevent reprocessing
@@ -106,13 +109,13 @@ class UserEventListenerTest {
     @Test
     void handleUserDeletedEvent_shouldHandleWhenNoCustomApisToDelete() {
         // Given
-        when(customApiService.deleteAllCustomApisByUserId("test-user-123")).thenReturn(0);
+        when(customApiService.deleteAllCustomApisByUserId("auth0|test-user-123")).thenReturn(0);
         
         // When
         userEventListener.handleUserDeletedEvent(userDeletedEvent, 0, 100L, acknowledgment);
         
         // Then
-        verify(customApiService, times(1)).deleteAllCustomApisByUserId("test-user-123");
+        verify(customApiService, times(1)).deleteAllCustomApisByUserId("auth0|test-user-123");
         verify(structuredLogger, times(1)).logBusinessEvent(eq("USER_DELETED_EVENT_RECEIVED"), anyString(), any());
         verify(structuredLogger, times(1)).logBusinessEvent(eq("USER_DELETED_EVENT_PROCESSED"), anyString(), any());
         verify(acknowledgment, times(1)).acknowledge();

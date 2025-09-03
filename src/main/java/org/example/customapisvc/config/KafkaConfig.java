@@ -95,7 +95,10 @@ public class KafkaConfig {
         props.put(JsonDeserializer.TYPE_MAPPINGS, 
             "org.example.APIManagementSvc.event.model.ExternalApiDeletedEvent:org.example.customapisvc.event.model.FlatExternalApiDeletedEvent," +
             "org.example.AIsvc.event.model.CustomApiCalledEvent:org.example.customapisvc.event.model.CustomApiCalledEvent," +
-            "CustomApiCalled:org.example.customapisvc.event.model.CustomApiCalledEvent");
+            "org.example.Usersvc.event.model.UserDeletedEvent:org.example.customapisvc.event.model.UserDeletedEvent," +
+            "org.example.Usersvc.event.model.UserSubscriptionUpdateEvent:org.example.customapisvc.event.model.UserSubscriptionUpdateEvent," +
+            "CustomApiCalled:org.example.customapisvc.event.model.CustomApiCalledEvent," +
+            "CustomApiCreateFailed:org.example.customapisvc.event.model.CustomApiCreateFailedEvent");
             
         // 역직렬화 실패 시 기본 타입 지정
         props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "org.example.customapisvc.event.model.CustomApiCalledEvent");

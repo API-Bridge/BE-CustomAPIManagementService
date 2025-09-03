@@ -151,20 +151,19 @@ class CustomApiControllerTest {
     }
 
     @Test
-    @DisplayName("GET /custom-apis/search - 이름으로 커스텀 API 검색 성공")
+    @DisplayName("GET /custom-apis/search - 공유된 커스텀 API 이름 검색 성공")
     void searchCustomApisByName_Success() throws Exception {
         // given
         List<CustomApiResponseDto> mockResponse = List.of(testResponse1);
-        given(customApiService.searchCustomApisByName("user-123", "날씨")).willReturn(mockResponse);
+        given(customApiService.searchCustomApisByName("날씨")).willReturn(mockResponse);
 
         // when & then
         mockMvc.perform(get("/custom-apis/search")
-                        .param("userId", "user-123")
                         .param("name", "날씨"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("커스텀 API 검색을 성공적으로 완료했습니다."))
+                .andExpect(jsonPath("$.message").value("공유된 커스텀 API 검색을 성공적으로 완료했습니다."))
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].name").value("날씨 조회 API"));
     }

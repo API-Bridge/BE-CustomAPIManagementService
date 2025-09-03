@@ -132,4 +132,14 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
      */
     @Query("SELECT ca.callCount FROM CustomApi ca WHERE ca.customApiId = :customApiId AND ca.deleted = false")
     Long findCallCountByCustomApiId(@Param("customApiId") String customApiId);
+
+    /**
+     * 공유된(public) 커스텀 API를 이름으로 검색
+     * 모든 사용자의 공유된 원본 API 중에서 이름에 특정 문자열이 포함된 API들을 조회
+     * 
+     * @param name 검색할 이름 (부분 일치)
+     * @return 검색된 공유 커스텀 API 목록
+     */
+    @Query("SELECT ca FROM CustomApi ca WHERE ca.isPublic = true AND ca.apiType = 'ORIGINAL' AND ca.name LIKE %:name% AND ca.deleted = false")
+    List<CustomApi> findSharedApisByNameContaining(@Param("name") String name);
 }

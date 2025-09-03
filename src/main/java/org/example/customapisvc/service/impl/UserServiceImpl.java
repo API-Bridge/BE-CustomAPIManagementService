@@ -33,7 +33,7 @@ public class UserServiceImpl implements UserService {
         Map<String, Object> additionalFields = new HashMap<>();
         additionalFields.put("user_id", userId);
         additionalFields.put("external_service", "user-service");
-        additionalFields.put("endpoint", "/users/{userId}");
+        additionalFields.put("endpoint", "/api/users/info");
         
         long startTime = System.currentTimeMillis();
         
@@ -43,7 +43,8 @@ public class UserServiceImpl implements UserService {
                 
             UserInfoResponseDto response = userServiceWebClient
                     .get()
-                    .uri("/users/{userId}", userId)
+                    .uri("/api/users/info")
+                    .header("X-User-Id", userId)
                     .retrieve()
                     .bodyToMono(UserInfoResponseDto.class)
                     .retryWhen(Retry.backoff(3, Duration.ofMillis(1000))

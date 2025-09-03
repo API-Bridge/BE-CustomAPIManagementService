@@ -3,6 +3,13 @@ spring:
     name: custom-api-svc
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  
+  # Jackson 설정
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
 
 
   # JPA 설정 (Amazon Corretto 17 최적화)
@@ -79,10 +86,10 @@ gemini:
 
 # 외부 마이크로서비스 설정
 external-api-service:
-  base-url: ${EXTERNAL_API_SERVICE_URL:http://localhost:8081}
+  base-url: ${EXTERNAL_API_SERVICE_URL:http://localhost:8082}
 
 user-service:
-  base-url: ${USER_SERVICE_URL:http://localhost:8082}
+  base-url: ${USER_SERVICE_URL:http://localhost:8081}
 
 # AWS 설정
 #aws:
@@ -165,7 +172,7 @@ management:
 server:
   port: ${SERVER_PORT:8083}
   servlet:
-    context-path: /api/v1
+    context-path: /api
   tomcat:
     threads:
       max: 200

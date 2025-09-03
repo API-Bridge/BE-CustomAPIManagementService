@@ -25,7 +25,7 @@ user-service:
   timeout: 3000
   retry-attempts: 2
   mock:
-    enabled: true  # 개발 환경에서 Mock User 서비스 사용
+    enabled: false  # 개발 환경에서 Mock User 서비스 사용
 
 # Gemini AI 설정 (개발 환경)
 gemini:

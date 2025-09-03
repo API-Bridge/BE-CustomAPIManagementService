@@ -19,8 +19,8 @@ public interface CustomApiService {
     //커스텀 API 상세 조회 (외부 마이크로서비스용)
     CustomApiDetailResponseDto getCustomApiDetailById(String customApiId);
 
-    //커스텀 API 이름으로 검색
-    List<CustomApiResponseDto> searchCustomApisByName(String userId, String name);
+    //커스텀 API 이름으로 검색 (공유된 API만)
+    List<CustomApiResponseDto> searchCustomApisByName(String name);
 
 
     //커스텀 API 삭제 (Soft Delete) - 이벤트 발행 포함

@@ -67,13 +67,13 @@ public class CustomApiServiceImpl implements CustomApiService {
                 if (originApi == null || originApi.isDeleted()) {
                     throw new RuntimeException("원본 API가 삭제되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
                 }
-                if (!originApi.getIsActive()) {
+                if (!Boolean.TRUE.equals(originApi.getIsActive())) {
                     throw new RuntimeException("원본 API가 비활성화되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
                 }
             }
             
             // 커스텀 API가 비활성화되어 있는지 확인
-            if (!customApi.getIsActive()) {
+            if (!Boolean.TRUE.equals(customApi.getIsActive())) {
                 structuredLogger.logBusinessEvent("CUSTOM_API_DISABLED_ACCESS_ATTEMPT", 
                     "Attempt to access disabled custom API", additionalFields);
                 throw new RuntimeException("의존되는 외부 API의 영향으로 이 커스텀 API는 사용할 수 없습니다. 새 커스텀API 를 생성해주세요. customApiId: " + customApiId);
@@ -107,13 +107,13 @@ public class CustomApiServiceImpl implements CustomApiService {
                 if (originApi == null || originApi.isDeleted()) {
                     throw new RuntimeException("원본 API가 삭제되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
                 }
-                if (!originApi.getIsActive()) {
+                if (!Boolean.TRUE.equals(originApi.getIsActive())) {
                     throw new RuntimeException("원본 API가 비활성화되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
                 }
             }
             
             // 커스텀 API가 비활성화되어 있는지 확인
-            if (!customApi.getIsActive()) {
+            if (!Boolean.TRUE.equals(customApi.getIsActive())) {
                 structuredLogger.logBusinessEvent("CUSTOM_API_DISABLED_ACCESS_ATTEMPT", 
                     "Attempt to access disabled custom API", additionalFields);
                 throw new RuntimeException("의존되는 외부 API의 영향으로 이 커스텀 API는 사용할 수 없습니다. 새 커스텀API 를 생성해주세요. customApiId: " + customApiId);
@@ -131,10 +131,18 @@ public class CustomApiServiceImpl implements CustomApiService {
     }
 
     @Override
-    public List<CustomApiResponseDto> searchCustomApisByName(String userId, String name) {
-        log.debug("사용자 이름으로 커스텀API 검색: {} 다음 이름을 포함한 커스텀API 검색: {}", userId, name);
+    public List<CustomApiResponseDto> searchCustomApisByName(String name) {
+        log.debug("공유된 커스텀API 검색: {}", name);
         
-        List<CustomApi> customApis = customApiRepository.findByUserIdAndNameContainingAndDeletedFalse(userId, name);
+        Map<String, Object> additionalFields = new HashMap<>();
+        additionalFields.put("search_name", name);
+        
+        List<CustomApi> customApis = customApiRepository.findSharedApisByNameContaining(name);
+        
+        additionalFields.put("result_count", customApis.size());
+        structuredLogger.logBusinessEvent("SHARED_CUSTOM_API_SEARCH", 
+            "Searched shared custom APIs by name, found " + customApis.size() + " results", additionalFields);
+        
         return customApis.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
@@ -341,7 +349,7 @@ public class CustomApiServiceImpl implements CustomApiService {
         linkedApi.setDescription(originApi.getDescription()); // 설명도 복사
         linkedApi.setApiType(ApiType.LINK);
         linkedApi.setOriginApi(originApi); // 원본 API 참조 설정
-        linkedApi.setIsActive(originApi.getIsActive()); // 원본의 활성 상태를 따라감
+        linkedApi.setIsActive(Boolean.TRUE.equals(originApi.getIsActive())); // 원본의 활성 상태를 따라감
         linkedApi.setAiPlusActive(originApi.getAiPlusActive());
 
         CustomApi savedLinkedApi = customApiRepository.save(linkedApi);

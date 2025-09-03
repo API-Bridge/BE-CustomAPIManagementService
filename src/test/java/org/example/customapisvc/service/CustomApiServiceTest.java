@@ -112,20 +112,20 @@ class CustomApiServiceTest {
     }
 
     @Test
-    @DisplayName("이름으로 커스텀 API 검색 성공")
+    @DisplayName("공유된 커스텀 API 이름 검색 성공")
     void searchCustomApisByName_Success() {
         // given
         List<CustomApi> mockCustomApis = Collections.singletonList(testCustomApi1);
-        given(customApiRepository.findByUserIdAndNameContainingAndDeletedFalse("user-123", "날씨")).willReturn(mockCustomApis);
+        given(customApiRepository.findSharedApisByNameContaining("날씨")).willReturn(mockCustomApis);
 
         // when
-        List<CustomApiResponseDto> result = customApiService.searchCustomApisByName("user-123", "날씨");
+        List<CustomApiResponseDto> result = customApiService.searchCustomApisByName("날씨");
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).contains("날씨");
         
-        then(customApiRepository).should(times(1)).findByUserIdAndNameContainingAndDeletedFalse("user-123", "날씨");
+        then(customApiRepository).should(times(1)).findSharedApisByNameContaining("날씨");
     }
 
     @Test

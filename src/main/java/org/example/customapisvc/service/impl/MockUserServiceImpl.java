@@ -31,7 +31,7 @@ public class MockUserServiceImpl implements UserService {
         Map<String, Object> additionalFields = new HashMap<>();
         additionalFields.put("user_id", userId);
         additionalFields.put("external_service", "user-service-mock");
-        additionalFields.put("endpoint", "mock:/users/{userId}");
+        additionalFields.put("endpoint", "mock:/api/v1/users/info");
         
         long startTime = System.currentTimeMillis();
         

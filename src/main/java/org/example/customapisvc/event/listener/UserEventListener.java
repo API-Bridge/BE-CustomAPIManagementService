@@ -54,42 +54,45 @@ public class UserEventListener {
             @Header(KafkaHeaders.OFFSET) long offset,
             Acknowledgment acknowledgment) {
         
-        log.info("사용자 삭제 이벤트 수신 - eventId: {}, userId: {}, partition: {}, offset: {}", 
-                userDeletedEvent.getEventId(), userDeletedEvent.getPayload().getUserId(), partition, offset);
+        log.info("사용자 삭제 이벤트 수신 - eventId: {}, auth0Id: {}, partition: {}, offset: {}", 
+                userDeletedEvent.getEventId(), userDeletedEvent.getAuth0Id(), partition, offset);
         
         Map<String, Object> additionalFields = new HashMap<>();
         additionalFields.put("event_id", userDeletedEvent.getEventId());
         additionalFields.put("trace_id", userDeletedEvent.getTraceId());
-        additionalFields.put("user_id", userDeletedEvent.getPayload().getUserId());
+        additionalFields.put("user_id", userDeletedEvent.getUserId());
+        additionalFields.put("auth0_id", userDeletedEvent.getAuth0Id());
+        additionalFields.put("user_email", userDeletedEvent.getUserEmail());
+        additionalFields.put("deleted_at", userDeletedEvent.getDeletedAt());
         additionalFields.put("event_type", userDeletedEvent.getEventType());
         additionalFields.put("service_name", userDeletedEvent.getServiceName());
         additionalFields.put("partition", partition);
         additionalFields.put("offset", offset);
-        additionalFields.put("deletion_reason", userDeletedEvent.getPayload().getDeletionReason());
+        additionalFields.put("deletion_reason", userDeletedEvent.getDeletionReason());
         
         try {
             structuredLogger.logBusinessEvent("USER_DELETED_EVENT_RECEIVED", 
                 "Received user deletion event from Kafka", additionalFields);
             
-            // 사용자 ID 유효성 검증
-            String userId = userDeletedEvent.getPayload().getUserId();
-            if (userId == null || userId.trim().isEmpty()) {
+            // Auth0 ID 유효성 검증
+            String auth0Id = userDeletedEvent.getAuth0Id();
+            if (auth0Id == null || auth0Id.trim().isEmpty()) {
                 structuredLogger.logError("INVALID_USER_DELETED_EVENT", 
-                    "User ID is null or empty in user deletion event", new IllegalArgumentException("Invalid userId"), additionalFields);
-                log.error("유효하지 않은 사용자 삭제 이벤트: userId가 null 또는 빈 문자열입니다.");
+                    "Auth0 ID is null or empty in user deletion event", new IllegalArgumentException("Invalid auth0Id"), additionalFields);
+                log.error("유효하지 않은 사용자 삭제 이벤트: auth0Id가 null 또는 빈 문자열입니다.");
                 acknowledgment.acknowledge(); // 잘못된 이벤트는 스킵
                 return;
             }
             
-            // 해당 사용자의 모든 커스텀 API 삭제 처리
-            int deletedCount = customApiService.deleteAllCustomApisByUserId(userId);
+            // 해당 사용자의 모든 커스텀 API 삭제 처리 (Auth0 ID 기준)
+            int deletedCount = customApiService.deleteAllCustomApisByUserId(auth0Id);
             additionalFields.put("deleted_custom_apis_count", deletedCount);
             
             structuredLogger.logBusinessEvent("USER_DELETED_EVENT_PROCESSED", 
                 "Successfully processed user deletion event", additionalFields);
             
-            log.info("사용자 삭제 이벤트 처리 완료 - userId: {}, 삭제된 커스텀 API 개수: {}", 
-                    userId, deletedCount);
+            log.info("사용자 삭제 이벤트 처리 완료 - auth0Id: {}, 삭제된 커스텀 API 개수: {}", 
+                    auth0Id, deletedCount);
             
             // 메시지 처리 완료 확인 (수동 커밋)
             acknowledgment.acknowledge();
@@ -98,8 +101,8 @@ public class UserEventListener {
             structuredLogger.logError("USER_DELETED_EVENT_PROCESSING_ERROR", 
                 "Failed to process user deletion event", e, additionalFields);
             
-            log.error("사용자 삭제 이벤트 처리 중 오류 발생 - eventId: {}, userId: {}", 
-                    userDeletedEvent.getEventId(), userDeletedEvent.getPayload().getUserId(), e);
+            log.error("사용자 삭제 이벤트 처리 중 오류 발생 - eventId: {}, auth0Id: {}", 
+                    userDeletedEvent.getEventId(), userDeletedEvent.getAuth0Id(), e);
             
             // 에러 발생 시에도 메시지를 확인하여 재처리 방지
             // 실제 운영환경에서는 DLQ(Dead Letter Queue) 설정을 고려해야 함

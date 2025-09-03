@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.customapisvc.dto.common.BaseResponse;
 import org.example.customapisvc.event.model.CustomApiCalledEvent;
+import org.example.customapisvc.event.model.CustomApiCreateFailedEvent;
 import org.example.customapisvc.event.publisher.EventPublisherService;
 import org.example.customapisvc.service.ApiCallCountSyncService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -105,6 +106,51 @@ public class TestController {
         } catch (Exception e) {
             log.error("Redis 카운트 조회 실패 - customApiId: {}", customApiId, e);
             return BaseResponse.error("카운트 조회에 실패했습니다: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "CustomApiCreateFailed 이벤트 발행 테스트",
+               description = "테스트용으로 CustomApiCreateFailed 이벤트를 custom_api_events 토픽에 발행합니다.")
+    @PostMapping("/publish-api-create-failed-event")
+    public BaseResponse<String> publishCustomApiCreateFailedEvent() {
+        
+        try {
+            // 더미 데이터로 CustomApiCreateFailed 이벤트 생성
+            String userId = "test-user-" + System.currentTimeMillis();
+            String name = "Test Custom API";
+            String failureReason = "VALIDATION_ERROR";
+            String errorMessage = "테스트용 API 생성 실패 시뮬레이션";
+            String failureStage = "VALIDATION";
+            
+            CustomApiCreateFailedEvent event = new CustomApiCreateFailedEvent(
+                userId, name, failureReason, errorMessage, failureStage
+            );
+            
+            // 디버그: 이벤트 객체를 JSON으로 변환해서 로그 출력
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                mapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+                String eventJson = mapper.writeValueAsString(event);
+                log.info("이벤트 JSON 변환 결과: {}", eventJson);
+            } catch (Exception jsonEx) {
+                log.error("이벤트 JSON 변환 실패", jsonEx);
+            }
+            
+            // custom_api_events 토픽에 이벤트 발행
+            eventPublisher.publishEvent("custom_api_events", event);
+            
+            log.info("CustomApiCreateFailed 이벤트 발행 완료 - userId: {}, name: {}, failureReason: {}, eventId: {}", 
+                    userId, name, failureReason, event.getEventId());
+            
+            return BaseResponse.success(
+                String.format("이벤트 발행 완료 - eventId: %s", event.getEventId()),
+                "CustomApiCreateFailed 이벤트가 성공적으로 발행되었습니다."
+            );
+            
+        } catch (Exception e) {
+            log.error("CustomApiCreateFailed 이벤트 발행 실패", e);
+            return BaseResponse.error("이벤트 발행에 실패했습니다: " + e.getMessage());
         }
     }
 
