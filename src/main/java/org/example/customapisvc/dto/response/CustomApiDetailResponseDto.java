@@ -55,11 +55,6 @@ public class CustomApiDetailResponseDto {
 
         @Schema(description = "HTTP 메소드", example = "GET")
         private String httpMethod;
-        
-        // httpMethod getter with default value
-        public String getHttpMethod() {
-            return httpMethod != null ? httpMethod : "GET";
-        }
 
         @Schema(description = "파라미터 목록")
         private List<ApiParameterDetail> parameters;
@@ -83,5 +78,8 @@ public class CustomApiDetailResponseDto {
 
         @Schema(description = "필수 여부", example = "true")
         private boolean necessary;
+
+        @Schema(description = "기본값", example = "bitcoin,ethereum")
+        private String defaultValue;
     }
 }

@@ -31,9 +31,8 @@ import java.util.List;
     @Index(name = "idx_deleted", columnList = "deleted"),
     @Index(name = "idx_user_id_deleted", columnList = "user_id, deleted"),
     @Index(name = "idx_is_active", columnList = "is_active"),
-    @Index(name = "idx_api_type", columnList = "api_type"),
-    @Index(name = "idx_is_public", columnList = "is_public"),
-    @Index(name = "idx_origin_api_id", columnList = "origin_api_id")
+    @Index(name = "idx_is_public", columnList = "is_public")
+    // Association Table 모델: api_type, origin_api_id 인덱스 제거
 })
 @Getter
 @Setter
@@ -66,22 +65,12 @@ public class CustomApi extends BaseEntity {
     @Column(name = "ai_plus_active", nullable = false)
     private Boolean aiPlusActive = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "api_type", nullable = false)
-    private ApiType apiType = ApiType.ORIGINAL; // 기본값은 ORIGINAL
-
+    // Association Table 모델: 자기참조 관계 제거
+    // api_type, origin_api_id 필드 삭제됨
+    // linkedApis 관계도 삭제됨
+    
     @Column(name = "is_public", nullable = false)
-    private boolean isPublic = false; // 공유 여부, 기본값은 false
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "origin_api_id")
-    @ToString.Exclude
-    @JsonIgnore
-    private CustomApi originApi; // LINK 타입일 경우, 원본 API를 참조
-
-    @OneToMany(mappedBy = "originApi", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    private List<CustomApi> linkedApis = new ArrayList<>(); // 원본 API에 연결된 링크들
+    private boolean isPublic = false; // 전체 공개 여부, 기본값은 false
 
     @Column(name = "call_count", nullable = false)
     private Long callCount = 0L; // 일일 호출 횟수
@@ -98,14 +87,11 @@ public class CustomApi extends BaseEntity {
     }
     
     public List<ExternalApiInfoDto> getExternalApiUrlList() {
-        // LINK 타입인 경우, 항상 원본 API의 목록을 반환합니다.
-        if (this.apiType == ApiType.LINK && this.originApi != null) {
-            return this.originApi.getExternalApiUrlList();
-        }
-
-        // ORIGINAL 타입인 경우, 자신의 목록을 반환합니다.
+        // Association Table 모델: 모든 API가 원본이므로 직접 데이터 반환
+        // (공유 관계는 api_share 테이블에서 별도 관리)
+        
         if (externalApiUrlList == null && externalApiUrlListJson != null) {
-            // Json 에서 역직렬화 (역직렬화: JSON을 객체로 변환하는 과정)
+            // Json에서 역직렬화
             try {
                 ObjectMapper mapper = new ObjectMapper();
                 

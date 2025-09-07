@@ -1,0 +1,146 @@
+# customApiSvc 차트의 기본 값들을 설정합니다.
+# 이 파일은 YAML 형식입니다.
+# 템플릿으로 전달될 변수들을 선언합니다.
+
+# 레플리카셋(ReplicaSet)의 개수를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+# 컨테이너 이미지를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: api-bridge/custom-api-svc
+  # 이미지의 pull policy(가져오기 정책)를 설정합니다.
+  pullPolicy: IfNotPresent
+  # 이미지 태그를 설정합니다. 기본값은 차트의 appVersion입니다.
+  tag: "1.0.0"
+
+# 비공개(private) 레지스트리에서 이미지를 가져올 때 사용할 secret을 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# 차트 이름을 덮어쓸 때 사용합니다.
+nameOverride: ""
+# 전체 이름(fullname)을 덮어쓸 때 사용합니다.
+fullnameOverride: ""
+
+# 서비스 어카운트(Service Account)를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # 서비스 어카운트를 생성할지 여부를 지정합니다.
+  create: true
+  # 서비스 어카운트의 API 자격증명을 자동으로 마운트할지 여부를 지정합니다.
+  automount: true
+  # 서비스 어카운트에 추가할 어노테이션(Annotation)입니다.
+  annotations: {}
+  # 사용할 서비스 어카운트의 이름입니다.
+  # 설정하지 않고 create가 true이면, fullname 템플릿을 사용하여 이름이 생성됩니다.
+  name: ""
+
+# 파드(Pod)에 쿠버네티스 어노테이션(Annotation)을 설정합니다.
+# 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# 파드(Pod)에 쿠버네티스 라벨(Label)을 설정합니다.
+# 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+# 파드(Pod)의 보안 컨텍스트(Security Context)를 설정합니다.
+podSecurityContext: {}
+# fsGroup: 2000
+
+# 컨테이너의 보안 컨텍스트(Security Context)를 설정합니다.
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+# runAsUser: 1000
+
+# 서비스(Service)를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # 서비스 타입을 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # 포트를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 8083
+
+# 인그레스(Ingress)를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: false
+  className: "alb"
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# 리소스(CPU, 메모리)를 설정합니다.
+resources:
+  # 일반적으로 기본 리소스를 지정하지 않고 사용자가 직접 선택하도록 두는 것을 권장합니다.
+  # 이렇게 하면 Minikube와 같이 리소스가 적은 환경에서도 차트가 실행될 가능성이 높아집니다.
+  # 리소스를 지정하려면 아래 줄의 주석을 해제하고 필요에 맞게 조정한 다음 'resources:' 뒤의 중괄호를 제거하세요.
+  limits:
+    cpu: 500m
+    memory: 256Mi
+    requests:
+      cpu: 200m
+      memory: 128Mi
+
+# liveness 및 readiness 프로브(probe)를 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+
+# 오토스케일링(Autoscaling)을 설정합니다. 자세한 정보는 다음 링크를 참고하세요: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+
+# Filebeat DaemonSet configuration
+filebeat:
+  enabled: true
+  image:
+    repository: docker.elastic.co/beats/filebeat
+    tag: 8.5.0 # 이전 답변에서 사용한 버전 예시, 최신 버전 확인 후 사용하세요.
+    pullPolicy: IfNotPresent
+  # Filebeat가 로그를 전송할 Logstash 서비스의 주소
+  # 형식: <service-name>.<namespace>.svc.cluster.local:<port>
+  logstashHost: "logstash-service.default.svc.cluster.local:5044"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 200m
+      memory: 200Mi
+
+
+# 최종 생성될 Deployment에 추가할 볼륨(volume)입니다.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# 최종 생성될 Deployment에 추가할 볼륨 마운트(volumeMount)입니다.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

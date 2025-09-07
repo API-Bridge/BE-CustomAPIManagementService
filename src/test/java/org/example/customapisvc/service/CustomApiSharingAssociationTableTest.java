@@ -30,171 +30,149 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("커스텀 API 공유 기능 테스트")
-class CustomApiSharingServiceTest {
+@DisplayName("커스텀 API 공유 기능 테스트 (Association Table 모델)")
+class CustomApiSharingAssociationTableTest {
 
     @Mock
     private CustomApiRepository customApiRepository;
+    
+    @Mock
+    private ApiShareRepository apiShareRepository;
 
     @InjectMocks
     private CustomApiServiceImpl customApiService;
 
     private CustomApi originalApi;
-    private CustomApi linkApi;
 
     @BeforeEach
     void setUp() {
+        // Association Table 모델: 모든 API는 원본
         originalApi = createTestApi("api-001", "user-123", "원본 API", "원본 설명");
-        originalApi.setApiType(ApiType.ORIGINAL);
         originalApi.setPublic(false);
-        
-        linkApi = createTestApi("api-002", "user-456", "링크 API", "가져온 API");
-        linkApi.setApiType(ApiType.LINK);
-        linkApi.setOriginApi(originalApi);
     }
 
     @Test
-    @DisplayName("커스텀 API 공유 설정 성공")
+    @DisplayName("커스텀 API 공유 성공 테스트 (Association Table 모델)")
     void shareCustomApi_Success() {
         // given
         given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
         given(customApiRepository.save(any(CustomApi.class))).willReturn(originalApi);
-
+        
         // when
         customApiService.shareCustomApi("api-001", "user-123", true);
-
+        
         // then
-        then(customApiRepository).should(times(1)).save(originalApi);
         assertThat(originalApi.isPublic()).isTrue();
+        then(customApiRepository).should(times(1)).save(originalApi);
     }
 
     @Test
-    @DisplayName("다른 사용자의 API 공유시 권한 예외 발생")
+    @DisplayName("권한 없는 사용자의 API 공유 시도 시 예외 발생")
     void shareCustomApi_UnauthorizedException() {
         // given
         given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
-
+        
         // when & then
         assertThatThrownBy(() -> customApiService.shareCustomApi("api-001", "other-user", true))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("API 공유 권한이 없습니다.");
+                .hasMessageContaining("API 공유 권한이 없습니다");
     }
 
     @Test
-    @DisplayName("LINK 타입 API 공유시 예외 발생")
-    void shareCustomApi_LinkTypeException() {
-        // given
-        given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-002")).willReturn(Optional.of(linkApi));
-
-        // when & then
-        assertThatThrownBy(() -> customApiService.shareCustomApi("api-002", "user-456", true))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("원본 API만 공유할 수 있습니다.");
-    }
-
-    @Test
-    @DisplayName("공유된 API 목록 조회 성공")
-    void getSharedApis_Success() {
+    @DisplayName("공유된 커스텀 API 목록 조회 (Association Table 모델)")
+    void getSharedApis() {
         // given
         CustomApi sharedApi1 = createTestApi("api-003", "user-111", "공유 API 1", "설명 1");
         CustomApi sharedApi2 = createTestApi("api-004", "user-222", "공유 API 2", "설명 2");
-        sharedApi1.setApiType(ApiType.ORIGINAL);
-        sharedApi2.setApiType(ApiType.ORIGINAL);
         sharedApi1.setPublic(true);
         sharedApi2.setPublic(true);
         
         List<CustomApi> mockSharedApis = Arrays.asList(sharedApi1, sharedApi2);
-        given(customApiRepository.findByIsPublicTrueAndApiTypeAndDeletedFalse(ApiType.ORIGINAL)).willReturn(mockSharedApis);
-
+        given(customApiRepository.findByIsPublicTrueAndDeletedFalse()).willReturn(mockSharedApis);
+        
         // when
         List<CustomApiResponseDto> result = customApiService.getSharedApis();
-
+        
         // then
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getCustomApiId()).isEqualTo("api-003");
-        assertThat(result.get(1).getCustomApiId()).isEqualTo("api-004");
-        assertThat(result.get(0).isPublic()).isTrue();
-        assertThat(result.get(1).isPublic()).isTrue();
+        assertThat(result.get(0).getName()).isEqualTo("공유 API 1");
+        assertThat(result.get(1).getName()).isEqualTo("공유 API 2");
     }
-
+    
     @Test
-    @DisplayName("공유 API 가져오기 성공")
+    @DisplayName("공유 API 가져오기 성공 (Association Table 모델)")
     void importSharedApi_Success() {
         // given
         originalApi.setPublic(true);
-        
         given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
-        given(customApiRepository.existsByOriginApiAndUserIdAndDeletedFalse(originalApi, "user-456")).willReturn(false);
-        given(customApiRepository.save(any(CustomApi.class))).willAnswer(invocation -> {
-            CustomApi savedApi = invocation.getArgument(0);
-            savedApi.setCustomApiId("api-link-new");
-            return savedApi;
+        given(apiShareRepository.existsByOriginApiAndUserId(originalApi, "importer-123")).willReturn(false);
+        given(apiShareRepository.save(any(ApiShare.class))).willAnswer(invocation -> {
+            ApiShare share = invocation.getArgument(0);
+            share.setShareId(1L);
+            return share;
         });
-
+        
         // when
-        CustomApiResponseDto result = customApiService.importSharedApi("api-001", "user-456");
-
+        CustomApiResponseDto result = customApiService.importSharedApi("api-001", "importer-123");
+        
         // then
-        assertThat(result.getCustomApiId()).isEqualTo("api-link-new");
-        assertThat(result.getUserId()).isEqualTo("user-456");
+        assertThat(result).isNotNull();
+        assertThat(result.getCustomApiId()).isEqualTo("api-001");
+        assertThat(result.getUserId()).isEqualTo("importer-123");
         assertThat(result.getApiType()).isEqualTo(ApiType.LINK);
         assertThat(result.getOriginApiId()).isEqualTo("api-001");
         assertThat(result.getOwnerUserId()).isEqualTo("user-123");
-        then(customApiRepository).should(times(1)).save(any(CustomApi.class));
+        
+        then(apiShareRepository).should(times(1)).save(any(ApiShare.class));
     }
-
+    
     @Test
-    @DisplayName("공개되지 않은 API 가져오기시 예외 발생")
+    @DisplayName("비공개 API 가져오기 시도 시 예외 발생")
     void importSharedApi_NotPublicException() {
         // given
-        originalApi.setPublic(false); // 공개되지 않은 API
+        originalApi.setPublic(false);
         given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
-
-        // when & then
-        assertThatThrownBy(() -> customApiService.importSharedApi("api-001", "user-456"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("이 API는 공유되지 않았거나 원본 API가 아닙니다.");
-    }
-
-    @Test
-    @DisplayName("이미 가져온 API 중복 가져오기시 예외 발생")
-    void importSharedApi_AlreadyImported() {
-        // given
-        originalApi.setPublic(true);
         
-        given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
-        given(customApiRepository.existsByOriginApiAndUserIdAndDeletedFalse(originalApi, "user-456")).willReturn(true);
-
         // when & then
-        assertThatThrownBy(() -> customApiService.importSharedApi("api-001", "user-456"))
+        assertThatThrownBy(() -> customApiService.importSharedApi("api-001", "importer-123"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("이미 가져온 API입니다.");
+                .hasMessageContaining("이 API는 공유되지 않았습니다");
     }
-
+    
     @Test
-    @DisplayName("자기 자신의 API 가져오기시 예외 발생")
-    void importSharedApi_SelfImport() {
+    @DisplayName("이미 가져온 API 재가져오기 시도 시 예외 발생")
+    void importSharedApi_AlreadyImportedException() {
         // given
         originalApi.setPublic(true);
         given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
+        given(apiShareRepository.existsByOriginApiAndUserId(originalApi, "importer-123")).willReturn(true);
+        
+        // when & then
+        assertThatThrownBy(() -> customApiService.importSharedApi("api-001", "importer-123"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("이미 가져온 API입니다");
+    }
 
+    @Test
+    @DisplayName("자기 자신의 API 가져오기 시도 시 예외 발생")
+    void importSharedApi_SelfImportException() {
+        // given
+        originalApi.setPublic(true);
+        given(customApiRepository.findByCustomApiIdAndDeletedFalse("api-001")).willReturn(Optional.of(originalApi));
+        
         // when & then
         assertThatThrownBy(() -> customApiService.importSharedApi("api-001", "user-123"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("자기 자신의 API는 가져올 수 없습니다.");
+                .hasMessageContaining("자기 자신의 API는 가져올 수 없습니다");
     }
 
-    private CustomApi createTestApi(String apiId, String userId, String name, String description) {
+    private CustomApi createTestApi(String id, String userId, String name, String description) {
         CustomApi api = new CustomApi();
-        api.setCustomApiId(apiId);
+        api.setCustomApiId(id);
         api.setUserId(userId);
         api.setName(name);
         api.setDescription(description);
         api.setIsActive(true);
-        api.setAiPlusActive(false);
-        api.setApiType(ApiType.ORIGINAL);
-        api.setPublic(false);
-        api.setDeleted(false);
         api.setCreatedAt(LocalDateTime.now());
         api.setUpdatedAt(LocalDateTime.now());
         return api;

@@ -14,15 +14,24 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    
+    public SecurityConfig() {
+        System.out.println("🔧 SecurityConfig 생성자 호출됨 - 모든 요청 허용 설정");
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        System.out.println("🔧 SecurityFilterChain 빈 생성 중 - 모든 요청 permitAll 설정");
         http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/**").permitAll()
                 .anyRequest().permitAll()
-            );
-
+            )
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.disable());
+        System.out.println("✅ SecurityFilterChain 설정 완료 - 모든 인증 비활성화, 모든 요청 허용");
         return http.build();
     }
 }

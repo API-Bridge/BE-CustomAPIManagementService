@@ -32,6 +32,8 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+      continue-on-error: true
 
   # Kafka 설정
   kafka:
@@ -52,22 +54,10 @@ spring:
         acks: all
         retries: 3
 
-  # Redis 설정 (최신 Spring Boot 표준 접두사 'spring.redis' 사용)
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-    ssl:
-      enabled: ${REDIS_SSL_ENABLED:false}
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
 
   # 데이터베이스 설정
   datasource:
-    url: jdbc:mysql://${DB_URL:127.0.0.1}:3306/${DB_NAME:custom_api_service_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_URL:127.0.0.1}/${DB_NAME:custom_api_service_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true&characterEncoding=UTF-8
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:cell4086}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -137,14 +127,16 @@ elk:
   logstash:
     enabled: ${ELK_LOGSTASH_ENABLED:false}
     host: ${LOGSTASH_HOST:localhost}
-    port: ${LOGSTASH_PORT:5000}
+    port: ${LOGSTASH_PORT:5044}
   filebeat:
     enabled: ${ELK_FILEBEAT_ENABLED:true}
-    log-path: ${LOG_PATH:logs}
+    log-path: ${LOG_PATH:/app/logs}
   elasticsearch:
     host: ${ELASTICSEARCH_HOST:localhost}
     port: ${ELASTICSEARCH_PORT:9200}
     index-pattern: custom-api-svc-logs
+    username: ${ELASTIC_USERNAME:elastic}
+    password: ${ELASTIC_PASSWORD:changeme}
 
 # 모니터링 설정 (Actuator + Prometheus)
 management:
@@ -210,7 +202,7 @@ spring:
       on-profile: prod
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:

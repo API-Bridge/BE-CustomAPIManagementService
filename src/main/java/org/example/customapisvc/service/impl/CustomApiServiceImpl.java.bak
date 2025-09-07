@@ -16,7 +16,10 @@ import org.example.customapisvc.util.StructuredLogger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -38,17 +41,20 @@ public class CustomApiServiceImpl implements CustomApiService {
         additionalFields.put("user_id", userId);
         
         structuredLogger.logUserActivity(userId, "GET_CUSTOM_APIS", "custom_apis", additionalFields);
-
+        
+        List<CustomApiResponseDto> result = new ArrayList<>();
+        
         // 1. 사용자가 직접 생성한 원본 API들
         List<CustomApi> ownedApis = customApiRepository.findByUserIdAndDeletedFalse(userId);
-        List<CustomApiResponseDto> result = ownedApis.stream()
-                .map(this::convertToResponse).collect(Collectors.toList());
+        result.addAll(ownedApis.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList()));
         
         // 2. 사용자가 가져온 공유 API들
         List<ApiShare> sharedApis = apiShareRepository.findByUserIdWithOriginApi(userId);
         result.addAll(sharedApis.stream()
                 .map(share -> convertToResponseWithContext(share.getOriginApi(), userId))
-                .toList());
+                .collect(Collectors.toList()));
         
         additionalFields.put("owned_apis_count", ownedApis.size());
         additionalFields.put("shared_apis_count", sharedApis.size());
@@ -71,8 +77,16 @@ public class CustomApiServiceImpl implements CustomApiService {
             CustomApi customApi = customApiRepository.findByCustomApiIdAndDeletedFalse(customApiId)
                     .orElseThrow(() -> new RuntimeException("커스텀API를 찾을 수 없습니다. customApiId: " + customApiId));
             
-            // Association Table 모델: 모든 API가 원본이므로 원본 상태 체크 불필요
-            // (공유 관계 체크는 필요시 api_share 테이블 조회로 처리)
+            // LINK 타입인 경우, 원본 API의 상태를 확인
+            if (customApi.getApiType() == ApiType.LINK) {
+                CustomApi originApi = customApi.getOriginApi();
+                if (originApi == null || originApi.isDeleted()) {
+                    throw new RuntimeException("원본 API가 삭제되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+                if (!Boolean.TRUE.equals(originApi.getIsActive())) {
+                    throw new RuntimeException("원본 API가 비활성화되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+            }
             
             // 커스텀 API가 비활성화되어 있는지 확인
             if (!Boolean.TRUE.equals(customApi.getIsActive())) {
@@ -103,8 +117,16 @@ public class CustomApiServiceImpl implements CustomApiService {
             CustomApi customApi = customApiRepository.findByCustomApiIdAndDeletedFalse(customApiId)
                     .orElseThrow(() -> new RuntimeException("커스텀API를 찾을 수 없습니다. customApiId: " + customApiId));
             
-            // Association Table 모델: 모든 API가 원본이므로 원본 상태 체크 불필요
-            // (공유 관계 체크는 필요시 api_share 테이블 조회로 처리)
+            // LINK 타입인 경우, 원본 API의 상태를 확인
+            if (customApi.getApiType() == ApiType.LINK) {
+                CustomApi originApi = customApi.getOriginApi();
+                if (originApi == null || originApi.isDeleted()) {
+                    throw new RuntimeException("원본 API가 삭제되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+                if (!Boolean.TRUE.equals(originApi.getIsActive())) {
+                    throw new RuntimeException("원본 API가 비활성화되어 이 API는 사용할 수 없습니다. customApiId: " + customApiId);
+                }
+            }
             
             // 커스텀 API가 비활성화되어 있는지 확인
             if (!Boolean.TRUE.equals(customApi.getIsActive())) {
@@ -342,7 +364,7 @@ public class CustomApiServiceImpl implements CustomApiService {
         log.info("User {} successfully imported API {}", importerUserId, originApiId);
         
         // 5. DTO 응답 생성 (호환성을 위해 LINK 타입처럼 보이도록)
-        return createImportedApiResponse(originApi, importerUserId, apiShare);
+        return createImportedApiResponse(originApi, importerUserId);
     }
 
     @Override
@@ -527,11 +549,14 @@ public class CustomApiServiceImpl implements CustomApiService {
         if (plan == null) {
             return 3; // 기본값 (FREE)
         }
-
-        return switch (plan.toUpperCase()) {
-            case "PRO" -> 5;
-            default -> 3;
-        };
+        
+        switch (plan.toUpperCase()) {
+            case "PRO":
+                return 5;
+            case "FREE":
+            default:
+                return 3;
+        }
     }
 
     //엔티티 -> DTO 변환 메소드

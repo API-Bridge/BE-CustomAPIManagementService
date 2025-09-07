@@ -193,6 +193,23 @@ INSERT INTO custom_api (
     '2024-02-12 16:30:20',
     '2024-02-12 16:30:20',
     FALSE
+),
+
+(
+ '폭염특보 및 주택정보',
+'google-oauth2|115305840705313410648',
+ '폭염특보 및 주택통계 통합 API',
+ '이 API는 두 개의 외부 API를 조합하여 사용자의 요구사항인 폭염 특보 정보와 주택 통계 정보를 제공합니다.  `과거 폭염특보 목록` API는 과거 폭염 특보 정보를 제공하며, `주택통계` API는 주택 통계 정보를 제공합니다.  두 API의 데이터를 통합하여 사용자에게 필요한 정보를 효율적으로 제공합니다.  두 API 모두 한국어로 응답하며, 필요에 따라  연도 및 월별 필터링이 가능합니다.',
+ '[{"apiId": "3d0ad254-a587-47f1-9627-8c5a75fdb53f", "reason": "사용자의 폭염특보(도메인=weather, 키워드=heatwave_report) 요구사항을 직접적으로 충족하는 API입니다.  과거 폭염 특보 목록을 제공하며,  `searchYear`와 `searchMonth` 파라미터를 통해 특정 년도와 월의 데이터를 조회할 수 있어 유용성이 높습니다.", "apiName": "과거 폭염특보 목록", "endpoint": "https://sgisapi.kostat.go.kr/OpenAPI3/ndsm/prevHwSpcnwsList.json", "httpMethod": "GET", "parameters": [{"necessary": "true", "paramName": "accessToken", "paramType": "String", "parameterId": "Heat-wave-warning-001", "defaultValue": "5b1d3b94-fb42-42ec-a5c7-b6898bc9d453", "paramDescription": "액세스키"}, {"necessary": "true", "paramName": "searchYear", "paramType": "String", "parameterId": "Heat-wave-warning-002", "defaultValue": "2023", "paramDescription": "폭염 발생 년도"}, {"necessary": true, "paramName": "searchMonth", "paramType": "String", "parameterId": "Heat-wave-warning-003", "defaultValue": "1", "paramDescription": "폭염 발생 월"}]}, {"apiId": "housing-stats-001", "reason": "사용자의 주택통계(도메인=realestate, 키워드=real_estate_trend) 요구사항을 충족하는 API입니다. 주택 통계 데이터를 제공하며, `year` 파라미터를 통해 특정 연도의 데이터를 조회할 수 있습니다.", "apiName": "주택통계", "endpoint": "https://sgisapi.kostat.go.kr/OpenAPI3/stats/house.json", "httpMethod": "GET", "parameters": [{"necessary": true, "paramName": "accessToken", "paramType": "string", "parameterId": "housing-stats-param-001", "defaultValue": "5b1d3b94-fb42-42ec-a5c7-b6898bc9d453", "paramDescription": "액세스키"}, {"necessary": false, "paramName": "year", "paramType": "string", "parameterId": "housing-stats-param-002", "defaultValue": "", "paramDescription": "조회연도"}]}]',
+ TRUE,
+ FALSE,
+ 'ORIGINAL',
+ FALSE,
+ NULL,
+ 0,
+ '2025-09-05 16:30:20',
+ '2025-09-05 16:30:20',
+ FALSE
 );
 
 -- 인덱스 최적화를 위한 통계 업데이트

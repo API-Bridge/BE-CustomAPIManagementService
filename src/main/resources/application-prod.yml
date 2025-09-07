@@ -1,7 +1,7 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: validate  # 애플리케이션 시작시 스키마 생성, 종료시 삭제
+      ddl-auto: create-drop  # 애플리케이션 시작시 스키마 생성, 종료시 삭제
     defer-datasource-initialization: true  # Hibernate 스키마 생성 후 data.sql 실행
     properties:
       hibernate:

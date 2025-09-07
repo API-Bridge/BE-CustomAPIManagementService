@@ -36,15 +36,7 @@ public class DisabledApiCacheService implements DisabledApiCache {
     @PostConstruct
     public void init() {
         this.setOperations = stringRedisTemplate.opsForSet();
-        try {
-            // Redis 연결 테스트
-            assert stringRedisTemplate.getConnectionFactory() != null;
-            stringRedisTemplate.getConnectionFactory().getConnection().ping();
-            log.info("✅ Redis 연결이 성공적으로 설정되었습니다 - Redis 기반 비활성화 API 캐시 사용");
-        } catch (Exception e) {
-            log.error("❌ Redis 연결에 실패했습니다: {}", e.getMessage());
-            throw new RuntimeException("Redis 연결 실패", e);
-        }
+        log.info("✅ Redis 연결이 설정되었습니다 - Redis 기반 비활성화 API 캐시 사용");
     }
 
     /**

@@ -1,6 +1,5 @@
 package org.example.customapisvc.repository;
 
-import org.example.customapisvc.domain.Entity.ApiType;
 import org.example.customapisvc.domain.Entity.CustomApi;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -67,11 +66,9 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
            "JSON_CONTAINS(ca.external_api_url_list_json, JSON_OBJECT('id', :externalApiId))", nativeQuery = true)
     long countActiveCustomApisByExternalApiId(@Param("externalApiId") String externalApiId);
 
-    // 공유된 원본 API 목록 조회
-    List<CustomApi> findByIsPublicTrueAndApiTypeAndDeletedFalse(ApiType apiType);
-
-    // 사용자가 이미 특정 원본 API를 가져왔는지 확인
-    boolean existsByOriginApiAndUserIdAndDeletedFalse(CustomApi originApi, String userId);
+    // Association Table 모델: 공유된 API 목록 조회 (모든 API가 원본이므로 is_public=true만 확인)
+    List<CustomApi> findByIsPublicTrueAndDeletedFalse();
+    
 
     /**
      * 사용자의 모든 커스텀 API를 생성일시 역순으로 정렬하여 조회 (최근 생성된 것부터)
@@ -134,12 +131,12 @@ public interface CustomApiRepository extends JpaRepository<CustomApi, String> {
     Long findCallCountByCustomApiId(@Param("customApiId") String customApiId);
 
     /**
-     * 공유된(public) 커스텀 API를 이름으로 검색
-     * 모든 사용자의 공유된 원본 API 중에서 이름에 특정 문자열이 포함된 API들을 조회
+     * 공유된(public) 커스텀 API를 이름으로 검색 (Association Table 모델)
+     * 모든 사용자의 공유된 API 중에서 이름에 특정 문자열이 포함된 API들을 조회
      * 
      * @param name 검색할 이름 (부분 일치)
      * @return 검색된 공유 커스텀 API 목록
      */
-    @Query("SELECT ca FROM CustomApi ca WHERE ca.isPublic = true AND ca.apiType = 'ORIGINAL' AND ca.name LIKE %:name% AND ca.deleted = false")
+    @Query("SELECT ca FROM CustomApi ca WHERE ca.isPublic = true AND ca.name LIKE %:name% AND ca.deleted = false")
     List<CustomApi> findSharedApisByNameContaining(@Param("name") String name);
 }
