@@ -1,5 +1,5 @@
 # Multi-stage build for Amazon Corretto 17
-FROM amazoncorretto:17-alpine AS builder
+FROM --platform=$BUILDPLATFORM amazoncorretto:17-alpine AS builder
 
 WORKDIR /app
 

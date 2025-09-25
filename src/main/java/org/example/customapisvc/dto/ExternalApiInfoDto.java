@@ -50,17 +50,29 @@ public class ExternalApiInfoDto {
     @Getter
     @Setter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class ApiParameter {
         private String parameterId;
         private String paramName;
         private String paramType;
-        @JsonProperty("necessary")
-        private boolean isRequired;
+        @JsonProperty("isRequired")
+        private boolean isRequired = true;  // 항상 true로 고정
         private String paramDescription;
         private String defaultValue;
 
-        public ApiParameter(String city, String string, String 날씨를_조회할_도시_이름, boolean b) {
+        public ApiParameter(String parameterId, String paramName, String paramType, boolean isRequired, String paramDescription, String defaultValue) {
+            this.parameterId = parameterId;
+            this.paramName = paramName;
+            this.paramType = paramType;
+            this.isRequired = true;  // 항상 true로 고정
+            this.paramDescription = paramDescription;
+            this.defaultValue = defaultValue;
+        }
+
+        public ApiParameter(String paramName, String paramType, String paramDescription, boolean isRequired) {
+            this.paramName = paramName;
+            this.paramType = paramType;
+            this.paramDescription = paramDescription;
+            this.isRequired = true;  // 항상 true로 고정
         }
     }
 }
